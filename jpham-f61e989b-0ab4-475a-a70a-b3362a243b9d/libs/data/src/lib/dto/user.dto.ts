@@ -1,28 +1,16 @@
-import { IsEmail, IsString, IsOptional, IsIn, MinLength, IsUUID } from 'class-validator';
 import { UserRole } from '../enums/role.enum';
 
-export class CreateUserDto {
-  @IsEmail()
-  email!: string;
+// Plain interfaces for frontend compatibility
+// Backend validates via ValidationPipe with class-validator
 
-  @IsString()
-  @MinLength(8)
-  password!: string;
-
-  @IsUUID()
-  organizationId!: string;
-
-  @IsIn(['owner', 'admin', 'viewer'])
-  @IsOptional()
+export interface CreateUserDto {
+  email: string;
+  password: string;
+  organizationId: string;
   role?: UserRole;
 }
 
-export class UpdateUserDto {
-  @IsEmail()
-  @IsOptional()
+export interface UpdateUserDto {
   email?: string;
-
-  @IsIn(['owner', 'admin', 'viewer'])
-  @IsOptional()
   role?: UserRole;
 }

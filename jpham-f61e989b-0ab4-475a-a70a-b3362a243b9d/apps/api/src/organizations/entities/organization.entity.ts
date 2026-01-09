@@ -14,16 +14,16 @@ export class Organization {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   name!: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', unique: true })
   slug!: string;
 
   @Column({ nullable: true, type: 'text' })
   description!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   parentId!: string | null;
 
   @ManyToOne(() => Organization, (org) => org.children, { nullable: true })

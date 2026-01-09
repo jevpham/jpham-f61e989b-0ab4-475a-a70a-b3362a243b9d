@@ -4,11 +4,13 @@ import { Task } from './entities/task.entity';
 import { TasksService } from './tasks.service';
 import { TasksController } from './tasks.controller';
 import { OrganizationsModule } from '../organizations/organizations.module';
+import { AuditModule } from '../audit/audit.module';
 
 @Module({
   imports: [
     TypeOrmModule.forFeature([Task]),
     OrganizationsModule,
+    AuditModule,
   ],
   controllers: [TasksController],
   providers: [TasksService],

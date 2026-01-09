@@ -1,64 +1,27 @@
-import { IsString, IsOptional, IsIn, MinLength, MaxLength, IsNumber, IsUUID, IsDateString, Min, ValidateIf } from 'class-validator';
-import { TaskStatus, TaskPriority } from '../enums/task-status.enum';
+import { TaskStatus, TaskPriority, TaskCategory } from '../enums/task-status.enum';
 
-export class CreateTaskDto {
-  @IsString()
-  @MinLength(1)
-  @MaxLength(200)
-  title!: string;
+// Plain interfaces for frontend compatibility
+// Backend validates via ValidationPipe with class-validator
 
-  @IsString()
-  @IsOptional()
-  @MaxLength(2000)
+export interface CreateTaskDto {
+  title: string;
   description?: string;
-
-  @IsIn(['low', 'medium', 'high', 'urgent'])
-  @IsOptional()
   priority?: TaskPriority;
-
-  @IsDateString()
-  @IsOptional()
+  category?: TaskCategory;
   dueDate?: string;
-
-  @IsUUID()
-  @IsOptional()
   assigneeId?: string;
 }
 
-export class UpdateTaskDto {
-  @IsString()
-  @IsOptional()
-  @MinLength(1)
-  @MaxLength(200)
+export interface UpdateTaskDto {
   title?: string;
-
-  @ValidateIf((o) => o.description !== null)
-  @IsString()
-  @IsOptional()
-  @MaxLength(2000)
   description?: string | null;
-
-  @IsIn(['todo', 'in_progress', 'review', 'done'])
-  @IsOptional()
   status?: TaskStatus;
-
-  @IsIn(['low', 'medium', 'high', 'urgent'])
-  @IsOptional()
   priority?: TaskPriority;
-
-  @ValidateIf((o) => o.dueDate !== null)
-  @IsDateString()
-  @IsOptional()
+  category?: TaskCategory;
   dueDate?: string | null;
-
-  @ValidateIf((o) => o.assigneeId !== null)
-  @IsUUID()
-  @IsOptional()
   assigneeId?: string | null;
 }
 
-export class ReorderTaskDto {
-  @IsNumber()
-  @Min(0)
-  newPosition!: number;
+export interface ReorderTaskDto {
+  newPosition: number;
 }

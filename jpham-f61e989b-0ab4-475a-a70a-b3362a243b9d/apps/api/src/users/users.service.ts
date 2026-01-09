@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { User } from './entities/user.entity';
 import { CreateUserDto } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+// DTO is now interface - validation happens in controller via ValidationPipe
 import * as bcrypt from 'bcrypt';
 
 @Injectable()

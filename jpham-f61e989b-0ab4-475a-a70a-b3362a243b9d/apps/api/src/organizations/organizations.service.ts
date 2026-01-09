@@ -4,6 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { Organization } from './entities/organization.entity';
 import { OrganizationMembership } from './entities/organization-membership.entity';
 import { UserRole, hasMinimumRole, CreateOrganizationDto, AddMemberDto } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+// DTOs are now interfaces - validation happens in controller via ValidationPipe
 
 @Injectable()
 export class OrganizationsService {

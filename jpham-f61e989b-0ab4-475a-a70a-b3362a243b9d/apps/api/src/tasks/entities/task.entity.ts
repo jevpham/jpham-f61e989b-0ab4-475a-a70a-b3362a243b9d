@@ -8,7 +8,7 @@ import {
   JoinColumn,
   Index,
 } from 'typeorm';
-import { TaskStatus, TaskPriority } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+import { TaskStatus, TaskPriority, TaskCategory } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 import { Organization } from '../../organizations/entities/organization.entity';
 import { User } from '../../users/entities/user.entity';
 
@@ -21,7 +21,7 @@ export class Task {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   title!: string;
 
   @Column({ nullable: true, type: 'text' })
@@ -33,27 +33,30 @@ export class Task {
   @Column({ type: 'varchar', default: 'medium' })
   priority!: TaskPriority;
 
-  @Column({ nullable: true, type: 'timestamp' })
+  @Column({ type: 'varchar', default: 'other' })
+  category!: TaskCategory;
+
+  @Column({ nullable: true, type: 'datetime' })
   dueDate!: Date | null;
 
   @Column({ type: 'int', default: 0 })
   position!: number;
 
-  @Column()
+  @Column({ type: 'varchar' })
   organizationId!: string;
 
   @ManyToOne(() => Organization)
   @JoinColumn({ name: 'organizationId' })
   organization!: Organization;
 
-  @Column()
+  @Column({ type: 'varchar' })
   createdById!: string;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'createdById' })
   createdBy!: User;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   assigneeId!: string | null;
 
   @ManyToOne(() => User, { nullable: true })

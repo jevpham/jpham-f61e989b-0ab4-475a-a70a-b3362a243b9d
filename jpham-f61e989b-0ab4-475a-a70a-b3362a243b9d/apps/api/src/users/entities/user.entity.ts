@@ -15,30 +15,30 @@ export class User {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column({ unique: true })
+  @Column({ type: 'varchar', unique: true })
   email!: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   password!: string;
 
   @Column({ type: 'varchar', default: 'viewer' })
   role!: UserRole;
 
-  @Column()
+  @Column({ type: 'varchar' })
   organizationId!: string;
 
   @ManyToOne(() => Organization)
   @JoinColumn({ name: 'organizationId' })
   organization!: Organization;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   refreshTokenHash!: string | null;
 
   // Account lockout fields
   @Column({ type: 'int', default: 0 })
   failedLoginAttempts!: number;
 
-  @Column({ type: 'timestamp', nullable: true })
+  @Column({ type: 'datetime', nullable: true })
   lockoutUntil!: Date | null;
 
   @CreateDateColumn()
