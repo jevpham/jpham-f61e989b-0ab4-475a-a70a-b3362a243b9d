@@ -1,0 +1,11 @@
+{
+  "name": "@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data",
+  "version": "0.0.1",
+  "private": true,
+  "type": "commonjs",
+  "main": "./src/index.js",
+  "types": "./src/index.d.ts",
+  "dependencies": {
+    "tslib": "^2.3.0"
+  }
+}
