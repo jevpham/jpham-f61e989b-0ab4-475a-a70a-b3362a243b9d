@@ -18,14 +18,14 @@ export class OrganizationMembership {
   @PrimaryGeneratedColumn('uuid')
   id!: string;
 
-  @Column()
+  @Column({ type: 'varchar' })
   userId!: string;
 
   @ManyToOne(() => User)
   @JoinColumn({ name: 'userId' })
   user!: User;
 
-  @Column()
+  @Column({ type: 'varchar' })
   organizationId!: string;
 
   @ManyToOne(() => Organization)

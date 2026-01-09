@@ -20,6 +20,7 @@ interface AuthState {
   user: IUser | null;
   accessToken: string | null;
   isLoading: boolean;
+  isInitialized: boolean;
   error: string | null;
 }
 
@@ -27,6 +28,7 @@ const initialState: AuthState = {
   user: null,
   accessToken: null,
   isLoading: false,
+  isInitialized: false,
   error: null,
 };
 
@@ -163,6 +165,36 @@ export const AuthStore = signalStore(
       clearError() {
         patchState(store, { error: null });
       },
+
+      // Initialize auth state on app startup by attempting to restore session
+      // Uses refresh token cookie (if present) to get new access token
+      initialize: rxMethod<void>(
+        pipe(
+          tap(() => patchState(store, { isLoading: true })),
+          switchMap(() =>
+            authService.refreshToken().pipe(
+              tap((response) => {
+                // Session restored successfully
+                patchState(store, {
+                  accessToken: response.accessToken,
+                  user: response.user,
+                  isLoading: false,
+                  isInitialized: true,
+                });
+              }),
+              catchError(() => {
+                // No valid refresh token - user needs to login
+                // This is expected for new visitors, don't navigate
+                patchState(store, {
+                  ...initialState,
+                  isInitialized: true,
+                });
+                return of(null);
+              }),
+            ),
+          ),
+        ),
+      ),
     };
   }),
 );

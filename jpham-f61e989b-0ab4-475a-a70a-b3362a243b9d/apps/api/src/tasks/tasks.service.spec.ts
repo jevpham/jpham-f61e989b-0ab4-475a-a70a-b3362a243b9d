@@ -5,6 +5,7 @@ import { ForbiddenException, NotFoundException, BadRequestException } from '@nes
 import { TasksService, TaskFilters } from './tasks.service';
 import { Task } from './entities/task.entity';
 import { OrganizationsService } from '../organizations/organizations.service';
+import { AuditService } from '../audit/audit.service';
 import { IUser, TaskStatus, TaskPriority, UserRole } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -118,12 +119,17 @@ describe('TasksService', () => {
       transaction: jest.fn(),
     };
 
+    const mockAuditService = {
+      log: jest.fn().mockResolvedValue({}),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TasksService,
         { provide: getRepositoryToken(Task), useValue: mockRepository },
         { provide: OrganizationsService, useValue: mockOrganizationsService },
         { provide: DataSource, useValue: mockDataSource },
+        { provide: AuditService, useValue: mockAuditService },
       ],
     }).compile();
 
@@ -376,7 +382,7 @@ describe('TasksService', () => {
       organizationsService.getMembership.mockResolvedValue(mockAdminMembership as any);
 
       const dto = { title: 'Updated Title' };
-      const result = await service.update('task-123', dto, mockAdminUser);
+      const result = await service.update('task-123', dto, mockAdminUser, 'org-123');
 
       expect(result.title).toBe('Updated Title');
     });
@@ -385,7 +391,7 @@ describe('TasksService', () => {
       organizationsService.getMembership.mockResolvedValue(mockOwnerMembership as any);
 
       const dto = { title: 'Updated by Owner' };
-      const result = await service.update('task-123', dto, mockOwnerUser);
+      const result = await service.update('task-123', dto, mockOwnerUser, 'org-123');
 
       expect(result.title).toBe('Updated by Owner');
     });
@@ -397,7 +403,7 @@ describe('TasksService', () => {
       organizationsService.getMembership.mockResolvedValue(mockViewerMembership as any);
 
       const dto = { title: 'Updated by Creator' };
-      const result = await service.update('task-123', dto, mockViewerUser);
+      const result = await service.update('task-123', dto, mockViewerUser, 'org-123');
 
       expect(result.title).toBe('Updated by Creator');
     });
@@ -409,7 +415,7 @@ describe('TasksService', () => {
       organizationsService.getMembership.mockResolvedValue(mockViewerMembership as any);
 
       const dto = { status: 'in_progress' as TaskStatus };
-      const result = await service.update('task-123', dto, mockViewerUser);
+      const result = await service.update('task-123', dto, mockViewerUser, 'org-123');
 
       expect(result.status).toBe('in_progress');
     });
@@ -419,7 +425,7 @@ describe('TasksService', () => {
 
       const dto = { title: 'Unauthorized Update' };
 
-      await expect(service.update('task-123', dto, mockViewerUser)).rejects.toThrow(
+      await expect(service.update('task-123', dto, mockViewerUser, 'org-123')).rejects.toThrow(
         ForbiddenException,
       );
     });
@@ -428,7 +434,7 @@ describe('TasksService', () => {
       const mockQb = createMockQueryBuilder(null);
       taskRepository.createQueryBuilder.mockReturnValue(mockQb);
 
-      await expect(service.update('nonexistent', {}, mockAdminUser)).rejects.toThrow(
+      await expect(service.update('nonexistent', {}, mockAdminUser, 'org-123')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -436,7 +442,7 @@ describe('TasksService', () => {
     it('should throw ForbiddenException when user is not a member', async () => {
       organizationsService.getMembership.mockResolvedValue(null);
 
-      await expect(service.update('task-123', {}, mockAdminUser)).rejects.toThrow(
+      await expect(service.update('task-123', {}, mockAdminUser, 'org-123')).rejects.toThrow(
         ForbiddenException,
       );
     });
@@ -448,7 +454,7 @@ describe('TasksService', () => {
 
       const dto = { assigneeId: 'non-member' };
 
-      await expect(service.update('task-123', dto, mockAdminUser)).rejects.toThrow(
+      await expect(service.update('task-123', dto, mockAdminUser, 'org-123')).rejects.toThrow(
         ForbiddenException,
       );
     });
@@ -457,7 +463,7 @@ describe('TasksService', () => {
       organizationsService.getMembership.mockResolvedValue(mockAdminMembership as any);
 
       const dto = { assigneeId: null };
-      const result = await service.update('task-123', dto, mockAdminUser);
+      const result = await service.update('task-123', dto, mockAdminUser, 'org-123');
 
       expect(result.assigneeId).toBeNull();
     });
@@ -473,7 +479,7 @@ describe('TasksService', () => {
         dueDate: '2024-12-31',
       };
 
-      const result = await service.update('task-123', dto, mockAdminUser);
+      const result = await service.update('task-123', dto, mockAdminUser, 'org-123');
 
       expect(result.title).toBe('New Title');
       expect(result.description).toBe('New Description');
@@ -493,7 +499,7 @@ describe('TasksService', () => {
     it('should allow owner to delete any task', async () => {
       organizationsService.getMembership.mockResolvedValue(mockOwnerMembership as any);
 
-      await service.delete('task-123', mockOwnerUser);
+      await service.delete('task-123', mockOwnerUser, 'org-123');
 
       expect(taskRepository.remove).toHaveBeenCalled();
     });
@@ -501,7 +507,7 @@ describe('TasksService', () => {
     it('should allow admin to delete any task', async () => {
       organizationsService.getMembership.mockResolvedValue(mockAdminMembership as any);
 
-      await service.delete('task-123', mockAdminUser);
+      await service.delete('task-123', mockAdminUser, 'org-123');
 
       expect(taskRepository.remove).toHaveBeenCalled();
     });
@@ -509,7 +515,7 @@ describe('TasksService', () => {
     it('should throw ForbiddenException when viewer tries to delete', async () => {
       organizationsService.getMembership.mockResolvedValue(mockViewerMembership as any);
 
-      await expect(service.delete('task-123', mockViewerUser)).rejects.toThrow(
+      await expect(service.delete('task-123', mockViewerUser, 'org-123')).rejects.toThrow(
         ForbiddenException,
       );
     });
@@ -518,7 +524,7 @@ describe('TasksService', () => {
       const mockQb = createMockQueryBuilder(null);
       taskRepository.createQueryBuilder.mockReturnValue(mockQb);
 
-      await expect(service.delete('nonexistent', mockAdminUser)).rejects.toThrow(
+      await expect(service.delete('nonexistent', mockAdminUser, 'org-123')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -526,7 +532,7 @@ describe('TasksService', () => {
     it('should throw ForbiddenException when user is not a member', async () => {
       organizationsService.getMembership.mockResolvedValue(null);
 
-      await expect(service.delete('task-123', mockAdminUser)).rejects.toThrow(
+      await expect(service.delete('task-123', mockAdminUser, 'org-123')).rejects.toThrow(
         ForbiddenException,
       );
     });
@@ -538,7 +544,7 @@ describe('TasksService', () => {
     });
 
     it('should throw BadRequestException for negative position', async () => {
-      await expect(service.reorder('task-123', -1, mockAdminUser)).rejects.toThrow(
+      await expect(service.reorder('task-123', -1, mockAdminUser, 'org-123')).rejects.toThrow(
         BadRequestException,
       );
     });
@@ -546,7 +552,7 @@ describe('TasksService', () => {
     it('should throw NotFoundException when task does not exist', async () => {
       taskRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.reorder('nonexistent', 5, mockAdminUser)).rejects.toThrow(
+      await expect(service.reorder('nonexistent', 5, mockAdminUser, 'org-123')).rejects.toThrow(
         NotFoundException,
       );
     });
@@ -554,7 +560,7 @@ describe('TasksService', () => {
     it('should throw ForbiddenException when user is not a member', async () => {
       organizationsService.getMembership.mockResolvedValue(null);
 
-      await expect(service.reorder('task-123', 5, mockAdminUser)).rejects.toThrow(
+      await expect(service.reorder('task-123', 5, mockAdminUser, 'org-123')).rejects.toThrow(
         ForbiddenException,
       );
     });
@@ -564,7 +570,7 @@ describe('TasksService', () => {
       const taskAtPosition1 = { ...mockTask, position: 1 };
       taskRepository.findOne.mockResolvedValue(taskAtPosition1 as Task);
 
-      const result = await service.reorder('task-123', 1, mockAdminUser);
+      const result = await service.reorder('task-123', 1, mockAdminUser, 'org-123');
 
       expect(result).toEqual(taskAtPosition1);
       expect(dataSource.transaction).not.toHaveBeenCalled();
@@ -587,7 +593,7 @@ describe('TasksService', () => {
         return cb(mockManager);
       });
 
-      const result = await service.reorder('task-123', 5, mockAdminUser);
+      const result = await service.reorder('task-123', 5, mockAdminUser, 'org-123');
 
       expect(dataSource.transaction).toHaveBeenCalled();
       expect(result).toEqual(updatedTask);
@@ -633,9 +639,9 @@ describe('TasksService', () => {
           taskRepository.remove.mockResolvedValue(undefined as any);
 
           if (shouldSucceed) {
-            await expect(service.delete('task-123', user)).resolves.toBeUndefined();
+            await expect(service.delete('task-123', user, 'org-123')).resolves.toBeUndefined();
           } else {
-            await expect(service.delete('task-123', user)).rejects.toThrow(ForbiddenException);
+            await expect(service.delete('task-123', user, 'org-123')).rejects.toThrow(ForbiddenException);
           }
         }
       });

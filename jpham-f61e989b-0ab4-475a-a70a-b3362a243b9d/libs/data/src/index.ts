@@ -15,3 +15,5 @@ export * from './lib/dto/login.dto';
 export * from './lib/dto/create-task.dto';
 export * from './lib/dto/user.dto';
 export * from './lib/dto/organization.dto';
+export * from './lib/dto/pagination.dto';
+export * from './lib/dto/task-filter.dto';

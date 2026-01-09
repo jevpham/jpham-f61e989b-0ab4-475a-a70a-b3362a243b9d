@@ -21,7 +21,8 @@ import {
 } from '@nestjs/swagger';
 import { OrganizationsService } from './organizations.service';
 import { CurrentUser, Roles } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/auth';
-import { IUser, IOrganization, UserRole, CreateOrganizationDto, AddMemberDto } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+import { IUser, IOrganization, UserRole } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+import { CreateOrganizationDtoValidation as CreateOrganizationDto, AddMemberDtoValidation as AddMemberDto } from '../common/dto/validation.dto';
 import { Organization } from './entities/organization.entity';
 
 const VALID_ROLES: UserRole[] = ['owner', 'admin', 'viewer'];

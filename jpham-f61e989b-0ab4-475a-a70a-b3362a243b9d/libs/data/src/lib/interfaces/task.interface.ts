@@ -1,4 +1,4 @@
-import { TaskStatus, TaskPriority } from '../enums/task-status.enum';
+import { TaskStatus, TaskPriority, TaskCategory } from '../enums/task-status.enum';
 import { IUser } from './user.interface';
 
 export interface ITask {
@@ -7,6 +7,7 @@ export interface ITask {
   description: string | null;
   status: TaskStatus;
   priority: TaskPriority;
+  category: TaskCategory;
   dueDate: Date | null;
   position: number;
   organizationId: string;

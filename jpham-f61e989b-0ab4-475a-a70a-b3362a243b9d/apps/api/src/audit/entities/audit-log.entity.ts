@@ -19,25 +19,25 @@ export class AuditLog {
   @Column({ type: 'varchar' })
   action!: AuditAction;
 
-  @Column()
+  @Column({ type: 'varchar' })
   resource!: string;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   resourceId!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   userId!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   organizationId!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'varchar', nullable: true })
   ipAddress!: string | null;
 
-  @Column({ nullable: true })
+  @Column({ type: 'text', nullable: true })
   userAgent!: string | null;
 
-  @Column({ type: 'jsonb', nullable: true })
+  @Column({ type: 'simple-json', nullable: true })
   metadata!: Record<string, unknown> | null;
 
   @CreateDateColumn()

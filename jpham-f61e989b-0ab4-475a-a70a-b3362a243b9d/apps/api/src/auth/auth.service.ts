@@ -112,6 +112,12 @@ export class AuthService implements OnModuleInit {
       throw new ForbiddenException('Access denied');
     }
 
+    // Check account lockout - locked accounts cannot refresh tokens
+    if (this.isAccountLocked(user)) {
+      this.logger.warn(`Refresh token attempt for locked account: ${userId}`);
+      throw new ForbiddenException('Account temporarily locked');
+    }
+
     if (!user.refreshTokenHash) {
       this.logger.warn(`Refresh token attempt for user without refresh token: ${userId}`);
       throw new ForbiddenException('Access denied');
@@ -209,13 +215,28 @@ export class AuthService implements OnModuleInit {
     const refreshExpiresIn = this.parseExpiresIn(
       this.configService.get<string>('JWT_REFRESH_EXPIRES_IN') ?? '7d',
     );
+    const cookieDomain = this.configService.get<string>('COOKIE_DOMAIN');
 
-    return {
+    const options: {
+      httpOnly: boolean;
+      secure: boolean;
+      sameSite: 'strict';
+      maxAge: number;
+      path: string;
+      domain?: string;
+    } = {
       httpOnly: true,
       secure: isProduction,
-      sameSite: 'strict' as const,
+      sameSite: 'strict',
       maxAge: refreshExpiresIn * 1000, // Convert to milliseconds
       path: '/api/auth', // Only sent to auth endpoints
     };
+
+    // Only set domain in production to allow subdomain sharing if configured
+    if (isProduction && cookieDomain) {
+      options.domain = cookieDomain;
+    }
+
+    return options;
   }
 }

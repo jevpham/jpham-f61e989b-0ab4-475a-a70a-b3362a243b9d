@@ -11,6 +11,7 @@ import { OrganizationsModule } from '../organizations/organizations.module';
 import { TasksModule } from '../tasks/tasks.module';
 import { AuditModule } from '../audit/audit.module';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { CsrfGuard } from '../auth/guards/csrf.guard';
 import { RolesGuard } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/auth';
 import { AuditInterceptor } from '../audit/audit.interceptor';
 import { User } from '../users/entities/user.entity';
@@ -42,11 +43,16 @@ const jwtSecretWithEntropy = Joi.string()
       isGlobal: true,
       envFilePath: ['.env', '.env.local'],
       validationSchema: Joi.object({
+        DATABASE_TYPE: Joi.string().valid('sqlite', 'postgres').default('sqlite'),
         DATABASE_HOST: Joi.string().default('localhost'),
         DATABASE_PORT: Joi.number().default(5432),
         DATABASE_NAME: Joi.string().default('taskdb'),
         DATABASE_USER: Joi.string().default('postgres'),
-        DATABASE_PASSWORD: Joi.string().required(),
+        DATABASE_PASSWORD: Joi.string().when('DATABASE_TYPE', {
+          is: 'postgres',
+          then: Joi.required(),
+          otherwise: Joi.optional(),
+        }),
         JWT_ACCESS_SECRET: jwtSecretWithEntropy,
         JWT_REFRESH_SECRET: jwtSecretWithEntropy,
         JWT_ACCESS_EXPIRES_IN: Joi.string().default('15m'),
@@ -62,22 +68,37 @@ const jwtSecretWithEntropy = Joi.string()
       },
     }),
 
-    // Database
+    // Database - supports SQLite (default for dev) or PostgreSQL (production)
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
-      useFactory: (configService: ConfigService) => ({
-        type: 'postgres',
-        host: configService.get<string>('DATABASE_HOST'),
-        port: configService.get<number>('DATABASE_PORT'),
-        username: configService.get<string>('DATABASE_USER'),
-        password: configService.get<string>('DATABASE_PASSWORD'),
-        database: configService.get<string>('DATABASE_NAME'),
-        entities: [User, Organization, OrganizationMembership, Task, AuditLog],
-        // SECURITY: Never use synchronize in production - always use migrations
-        synchronize: false,
-        logging: configService.get<string>('NODE_ENV') === 'development',
-      }),
+      useFactory: (configService: ConfigService) => {
+        const dbType = configService.get<string>('DATABASE_TYPE') || 'sqlite';
+        const isDevMode = configService.get<string>('NODE_ENV') === 'development';
+
+        if (dbType === 'sqlite') {
+          return {
+            type: 'sqlite',
+            database: 'data/taskdb.sqlite',
+            entities: [User, Organization, OrganizationMembership, Task, AuditLog],
+            synchronize: isDevMode, // Auto-sync schema in dev for SQLite
+            logging: isDevMode,
+          };
+        }
+
+        return {
+          type: 'postgres',
+          host: configService.get<string>('DATABASE_HOST'),
+          port: configService.get<number>('DATABASE_PORT'),
+          username: configService.get<string>('DATABASE_USER'),
+          password: configService.get<string>('DATABASE_PASSWORD'),
+          database: configService.get<string>('DATABASE_NAME'),
+          entities: [User, Organization, OrganizationMembership, Task, AuditLog],
+          // SECURITY: Never use synchronize in production - always use migrations
+          synchronize: false,
+          logging: isDevMode,
+        };
+      },
     }),
 
     // Rate limiting
@@ -103,6 +124,7 @@ const jwtSecretWithEntropy = Joi.string()
     AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: CsrfGuard },
     { provide: APP_GUARD, useClass: RolesGuard },
     { provide: APP_INTERCEPTOR, useClass: AuditInterceptor },
   ],

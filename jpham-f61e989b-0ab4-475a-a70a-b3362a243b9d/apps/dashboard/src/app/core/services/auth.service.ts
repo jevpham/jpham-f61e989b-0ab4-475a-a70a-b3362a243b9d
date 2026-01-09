@@ -26,7 +26,9 @@ export class AuthService {
   }
 
   register(data: RegisterDto): Observable<IUser> {
-    return this.http.post<IUser>(`${this.apiUrl}/register`, data);
+    return this.http.post<IUser>(`${this.apiUrl}/register`, data, {
+      withCredentials: true,
+    });
   }
 
   logout(): Observable<{ message: string }> {

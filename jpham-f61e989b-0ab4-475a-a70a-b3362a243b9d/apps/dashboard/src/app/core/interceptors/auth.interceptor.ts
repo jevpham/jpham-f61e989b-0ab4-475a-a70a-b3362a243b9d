@@ -11,24 +11,38 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
   const authStore = inject(AuthStore);
   const authService = inject(AuthService);
 
-  // Skip auth for public auth endpoints
+  // Always add withCredentials for cookie support and CSRF header
+  const baseHeaders: Record<string, string> = {
+    'X-Requested-With': 'XMLHttpRequest', // CSRF protection
+  };
+
+  // For public auth endpoints (login/register) - add credentials for cookies but no auth header
   if (req.url.includes('/auth/login') || req.url.includes('/auth/register')) {
-    return next(req);
+    const clonedReq = req.clone({
+      withCredentials: true,
+      setHeaders: baseHeaders,
+    });
+    return next(clonedReq);
   }
 
   // For refresh endpoint - cookie is sent automatically with withCredentials
   // Don't add Authorization header (refresh token is in cookie)
   if (req.url.includes('/auth/refresh')) {
-    return next(req);
+    const clonedReq = req.clone({
+      withCredentials: true,
+      setHeaders: baseHeaders,
+    });
+    return next(clonedReq);
   }
 
-  // Add access token to requests
+  // Add access token to authenticated requests
   const accessToken = authStore.accessToken();
   if (accessToken) {
     const clonedReq = req.clone({
+      withCredentials: true,
       setHeaders: {
+        ...baseHeaders,
         Authorization: `Bearer ${accessToken}`,
-        'X-Requested-With': 'XMLHttpRequest', // CSRF protection
       },
     });
 
@@ -42,7 +56,12 @@ export const authInterceptor: HttpInterceptorFn = (req: HttpRequest<unknown>, ne
     );
   }
 
-  return next(req);
+  // Unauthenticated requests still need withCredentials for cookie support
+  const clonedReq = req.clone({
+    withCredentials: true,
+    setHeaders: baseHeaders,
+  });
+  return next(clonedReq);
 };
 
 function handleTokenRefresh(
@@ -54,16 +73,19 @@ function handleTokenRefresh(
   // If refresh is already in progress, reuse the same observable
   if (!refreshInProgress$) {
     refreshInProgress$ = authService.refreshToken().pipe(
-      // shareReplay ensures all concurrent requests share the same refresh call
-      shareReplay(1),
-      finalize(() => {
-        // Clear the shared observable after completion (success or error)
-        refreshInProgress$ = null;
-      }),
+      // catchError before shareReplay to handle errors once, not per subscriber
       catchError((refreshError) => {
-        // Use rxMethod for logout - wrapping in void observable pattern
+        // Clear the shared observable immediately on error
+        refreshInProgress$ = null;
+        // Trigger logout synchronously to prevent race conditions
         authStore.logout(undefined);
         return throwError(() => refreshError);
+      }),
+      // shareReplay with refCount: true cleans up when all subscribers unsubscribe
+      shareReplay({ bufferSize: 1, refCount: true }),
+      finalize(() => {
+        // Clear the shared observable after successful completion
+        refreshInProgress$ = null;
       }),
     );
   }
@@ -74,9 +96,10 @@ function handleTokenRefresh(
       // Update store with new access token and user
       authStore.setAccessToken(response.accessToken, response.user);
       const retryReq = req.clone({
+        withCredentials: true,
         setHeaders: {
-          Authorization: `Bearer ${response.accessToken}`,
           'X-Requested-With': 'XMLHttpRequest',
+          Authorization: `Bearer ${response.accessToken}`,
         },
       });
       return next(retryReq);

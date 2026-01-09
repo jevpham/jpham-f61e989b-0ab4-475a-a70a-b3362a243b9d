@@ -1,7 +1,7 @@
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { vi } from 'vitest';
 import { TaskCardComponent } from './task-card.component';
-import { ITask, TaskStatus, TaskPriority, IUser, UserRole } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+import { ITask, TaskStatus, TaskPriority, TaskCategory, IUser, UserRole } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
 describe('TaskCardComponent', () => {
   let component: TaskCardComponent;
@@ -22,6 +22,7 @@ describe('TaskCardComponent', () => {
     description: 'Test Description',
     status: 'todo' as TaskStatus,
     priority: 'medium' as TaskPriority,
+    category: 'other' as TaskCategory,
     dueDate: null,
     position: 1,
     organizationId: 'org-123',

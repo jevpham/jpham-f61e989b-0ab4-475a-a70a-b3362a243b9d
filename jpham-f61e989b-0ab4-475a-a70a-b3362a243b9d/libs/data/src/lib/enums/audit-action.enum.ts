@@ -7,4 +7,6 @@ export type AuditAction =
   | 'login_failed'
   | 'logout'
   | 'register'
-  | 'access_denied';
+  | 'access_denied'
+  | 'status_change'
+  | 'reorder';
