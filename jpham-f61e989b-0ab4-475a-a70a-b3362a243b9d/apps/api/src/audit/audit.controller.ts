@@ -27,6 +27,62 @@ export class AuditController {
     private readonly organizationsService: OrganizationsService,
   ) {}
 
+  @Get()
+  @Roles('owner', 'admin')
+  @ApiOperation({ summary: 'Get audit logs', description: 'Get audit logs for the current organization (Admin+ only)' })
+  @ApiQuery({ name: 'organizationId', required: false, description: 'Organization ID (defaults to current user org)' })
+  @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
+  @ApiQuery({ name: 'action', required: false, enum: ['create', 'update', 'delete', 'login', 'logout', 'status_change', 'role_change', 'reorder'] })
+  @ApiQuery({ name: 'resource', required: false, description: 'Filter by resource type (task, organization, user)' })
+  @ApiQuery({ name: 'startDate', required: false, description: 'Filter from date (ISO 8601)' })
+  @ApiQuery({ name: 'endDate', required: false, description: 'Filter to date (ISO 8601)' })
+  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
+  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 50, max: 100)' })
+  @ApiResponse({ status: 200, description: 'Returns paginated audit logs' })
+  @ApiResponse({ status: 403, description: 'Access denied - Admin role required' })
+  async findAll(
+    @CurrentUser() user: IUser,
+    @Query('organizationId') organizationId?: string,
+    @Query('userId') userId?: string,
+    @Query('action') action?: AuditAction,
+    @Query('resource') resource?: string,
+    @Query('startDate') startDate?: string,
+    @Query('endDate') endDate?: string,
+    @Query('page') page = '1',
+    @Query('limit') limit = '50',
+  ): Promise<{ data: IAuditLog[]; total: number; page: number; limit: number }> {
+    const targetOrganizationId = organizationId ?? user.organizationId;
+
+    const hasPermission = await this.organizationsService.hasPermission(
+      user.id,
+      targetOrganizationId,
+      'admin',
+    );
+
+    if (!hasPermission) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const filters: Omit<AuditLogFilters, 'organizationId'> = {};
+    if (userId) filters.userId = userId;
+    if (action) filters.action = action;
+    if (resource) filters.resource = resource;
+    if (startDate) filters.startDate = new Date(startDate);
+    if (endDate) filters.endDate = new Date(endDate);
+
+    const safePage = parseInt(page, 10);
+    const safeLimit = Math.min(parseInt(limit, 10), 100);
+
+    const result = await this.auditService.findByOrganization(
+      targetOrganizationId,
+      filters,
+      safePage,
+      safeLimit,
+    );
+
+    return { ...result, page: safePage, limit: safeLimit };
+  }
+
   @Get('organization/:orgId')
   @Roles('owner', 'admin')
   @ApiOperation({ summary: 'Get organization audit logs', description: 'Get audit logs for an organization (Admin+ only)' })

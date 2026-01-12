@@ -129,13 +129,20 @@ export class TasksService {
 
     // Use transaction to prevent race condition in position calculation
     const task = await this.dataSource.transaction(async (manager) => {
-      // Get max position with FOR UPDATE lock to prevent concurrent inserts from getting same position
-      const maxPositionResult = await manager
+      // Get max position - use pessimistic lock only for databases that support it (PostgreSQL, MySQL)
+      // SQLite uses file-level locking and doesn't support row-level locks
+      const queryBuilder = manager
         .createQueryBuilder(Task, 'task')
         .select('MAX(task.position)', 'max')
-        .where('task.organizationId = :organizationId', { organizationId })
-        .setLock('pessimistic_write')
-        .getRawOne();
+        .where('task.organizationId = :organizationId', { organizationId });
+
+      // Only apply pessimistic lock for databases that support it
+      const driverName = this.dataSource.driver.options.type;
+      if (driverName === 'postgres' || driverName === 'mysql' || driverName === 'mariadb') {
+        queryBuilder.setLock('pessimistic_write');
+      }
+
+      const maxPositionResult = await queryBuilder.getRawOne();
 
       const newTask = manager.create(Task, {
         title: dto.title,
