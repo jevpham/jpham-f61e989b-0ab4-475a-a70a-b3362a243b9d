@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, OnInit, inject, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { RouterLink } from '@angular/router';
@@ -7,190 +7,603 @@ import { AuthStore } from '../../../store/auth/auth.store';
 @Component({
   selector: 'app-login',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, ReactiveFormsModule, RouterLink],
   template: `
-    <div class="h-screen flex gradient-mesh-light dark:gradient-mesh-dark grain-overlay">
-      <!-- Left side - Branding -->
-      <div class="hidden lg:flex lg:w-1/2 h-full relative overflow-hidden">
-        <!-- Decorative background -->
-        <div class="absolute inset-0 bg-linear-to-br from-slate-900 via-slate-800 to-slate-900"></div>
-        <div class="absolute inset-0 bg-[url('data:image/svg+xml,%3Csvg%20width%3D%2260%22%20height%3D%2260%22%20viewBox%3D%220%200%2060%2060%22%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%3E%3Cg%20fill%3D%22none%22%20fill-rule%3D%22evenodd%22%3E%3Cg%20fill%3D%22%23f59e0b%22%20fill-opacity%3D%220.05%22%3E%3Cpath%20d%3D%22M36%2034v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6%2034v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6%204V0H4v4H0v2h4v4h2V6h4V4H6z%22%2F%3E%3C%2Fg%3E%3C%2Fg%3E%3C%2Fsvg%3E')] opacity-50"></div>
+    <div class="auth-container">
+      <!-- Decorative Background -->
+      <div class="auth-background">
+        <div class="bg-pattern"></div>
+        <div class="bg-gradient"></div>
+      </div>
 
-        <!-- Content -->
-        <div class="relative z-10 h-full flex flex-col justify-center px-12 xl:px-20">
-          <div class="animate-fade-in-up">
-            <!-- Logo -->
-            <div class="flex items-center gap-3 mb-12">
-              <div class="w-12 h-12 rounded-xl bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/30">
-                <svg class="w-7 h-7 text-white" width="28" height="28" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                </svg>
-              </div>
-              <span class="font-display text-2xl font-semibold text-white">TaskFlow</span>
+      <!-- Left Panel - Branding -->
+      <div class="brand-panel">
+        <div class="brand-content">
+          <!-- Logo -->
+          <div class="logo">
+            <div class="logo-mark">
+              <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect x="2" y="2" width="28" height="28" rx="6" stroke="currentColor" stroke-width="2.5"/>
+                <path d="M10 16L14 20L22 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </div>
+            <span class="logo-text">TaskFlow</span>
+          </div>
 
-            <h1 class="font-display text-4xl xl:text-5xl font-semibold text-white leading-tight mb-6">
+          <!-- Hero Text -->
+          <div class="hero-content">
+            <h1 class="hero-title">
               Organize your work,<br>
-              <span class="text-amber-400">amplify your focus.</span>
+              <span class="hero-accent">amplify your focus.</span>
             </h1>
-
-            <p class="text-lg text-slate-400 max-w-md mb-10">
-              A beautiful, intuitive task management experience designed for teams who value simplicity and efficiency.
+            <p class="hero-desc">
+              A beautifully crafted task management experience designed for teams who value simplicity and efficiency.
             </p>
+          </div>
 
-            <!-- Features list -->
-            <div class="space-y-4">
-              <div class="flex items-center gap-3 text-slate-300">
-                <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-amber-400" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <span>Drag-and-drop Kanban boards</span>
-              </div>
-              <div class="flex items-center gap-3 text-slate-300">
-                <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-amber-400" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <span>Team collaboration & audit logs</span>
-              </div>
-              <div class="flex items-center gap-3 text-slate-300">
-                <div class="w-8 h-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
-                  <svg class="w-4 h-4 text-amber-400" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <span>Beautiful dark mode support</span>
-              </div>
+          <!-- Features -->
+          <div class="features">
+            <div class="feature">
+              <span class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <rect x="3" y="3" width="7" height="7"/>
+                  <rect x="14" y="3" width="7" height="7"/>
+                  <rect x="14" y="14" width="7" height="7"/>
+                  <rect x="3" y="14" width="7" height="7"/>
+                </svg>
+              </span>
+              <span class="feature-text">Kanban boards</span>
+            </div>
+            <div class="feature">
+              <span class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+                  <circle cx="9" cy="7" r="4"/>
+                  <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+                </svg>
+              </span>
+              <span class="feature-text">Team collaboration</span>
+            </div>
+            <div class="feature">
+              <span class="feature-icon">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4"/>
+                </svg>
+              </span>
+              <span class="feature-text">Real-time sync</span>
             </div>
           </div>
         </div>
 
-        <!-- Decorative shapes -->
-        <div class="absolute bottom-0 left-0 right-0 h-px bg-linear-to-r from-transparent via-amber-500/50 to-transparent"></div>
+        <!-- Decorative line -->
+        <div class="brand-line"></div>
       </div>
 
-      <!-- Right side - Login form -->
-      <div class="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8 py-12">
-        <div class="w-full max-w-md">
-          <!-- Mobile logo -->
-          <div class="lg:hidden flex items-center justify-center gap-3 mb-10">
-            <div class="w-10 h-10 rounded-xl bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-              <svg class="w-6 h-6 text-white" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
+      <!-- Right Panel - Form -->
+      <div class="form-panel">
+        <div class="form-container">
+          <!-- Mobile Logo -->
+          <div class="mobile-logo">
+            <div class="logo-mark">
+              <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect x="2" y="2" width="28" height="28" rx="6" stroke="currentColor" stroke-width="2.5"/>
+                <path d="M10 16L14 20L22 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
               </svg>
             </div>
-            <span class="font-display text-xl font-semibold text-slate-900 dark:text-white">TaskFlow</span>
+            <span class="logo-text">TaskFlow</span>
           </div>
 
-          <div class="animate-fade-in-up">
-            <div class="text-center mb-8">
-              <h2 class="font-display text-2xl font-semibold text-slate-900 dark:text-white mb-2">
-                Welcome back
-              </h2>
-              <p class="text-slate-500 dark:text-slate-400">
-                Sign in to continue to your dashboard
-              </p>
+          <!-- Form Header -->
+          <div class="form-header">
+            <span class="form-eyebrow">Welcome back</span>
+            <h2 class="form-title">Sign in to your account</h2>
+            <p class="form-desc">Enter your credentials to continue</p>
+          </div>
+
+          <!-- Error Message -->
+          @if (authStore.error()) {
+            <div class="error-banner" role="alert" aria-live="assertive">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 8v4m0 4h.01"/>
+              </svg>
+              <span>{{ authStore.error() }}</span>
+            </div>
+          }
+
+          <!-- Form -->
+          <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+            <div class="form-group">
+              <label for="email" class="form-label">Email address</label>
+              <input
+                id="email"
+                type="email"
+                formControlName="email"
+                class="form-input"
+                [class.input-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+                [attr.aria-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+                [attr.aria-describedby]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched ? 'email-error' : null"
+                autocomplete="email"
+                placeholder="you@example.com"
+              />
+              @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+                <span id="email-error" class="field-error" aria-live="polite">
+                  @if (loginForm.get('email')?.hasError('required')) {
+                    Email is required
+                  } @else if (loginForm.get('email')?.hasError('email')) {
+                    Please enter a valid email
+                  }
+                </span>
+              }
             </div>
 
-            @if (authStore.error()) {
-              <div class="mb-6 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800/40 p-4 flex items-start gap-3 animate-fade-in-up">
-                <svg class="w-5 h-5 text-red-500 shrink-0 mt-0.5" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            <div class="form-group">
+              <label for="password" class="form-label">Password</label>
+              <input
+                id="password"
+                type="password"
+                formControlName="password"
+                class="form-input"
+                [class.input-error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+                [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+                [attr.aria-describedby]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched ? 'password-error' : null"
+                autocomplete="current-password"
+                placeholder="Enter your password"
+              />
+              @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+                <span id="password-error" class="field-error" aria-live="polite">
+                  @if (loginForm.get('password')?.hasError('required')) {
+                    Password is required
+                  } @else if (loginForm.get('password')?.hasError('minlength')) {
+                    Password must be at least 8 characters
+                  }
+                </span>
+              }
+            </div>
+
+            <button
+              type="submit"
+              [disabled]="loginForm.invalid || authStore.isLoading()"
+              class="submit-btn"
+            >
+              @if (authStore.isLoading()) {
+                <svg class="spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+                  <path class="spinner-head" d="M12 2a10 10 0 0110 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
                 </svg>
-                <p class="text-sm text-red-700 dark:text-red-300">{{ authStore.error() }}</p>
-              </div>
-            }
+                <span>Signing in...</span>
+              } @else {
+                <span>Sign in</span>
+                <span class="btn-arrow">→</span>
+              }
+            </button>
+          </form>
 
-            <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="space-y-5">
-              <div>
-                <label for="email" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Email address
-                </label>
-                <input
-                  id="email"
-                  type="email"
-                  formControlName="email"
-                  required
-                  class="input-field"
-                  [class.input-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
-                  [attr.aria-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
-                  [attr.aria-describedby]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched ? 'email-error' : null"
-                  placeholder="you@example.com"
-                />
-                @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
-                  <p id="email-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                    <svg class="w-4 h-4 shrink-0" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    @if (loginForm.get('email')?.hasError('required')) {
-                      <span>Email is required</span>
-                    } @else if (loginForm.get('email')?.hasError('email')) {
-                      <span>Please enter a valid email address</span>
-                    }
-                  </p>
-                }
-              </div>
-
-              <div>
-                <label for="password" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  formControlName="password"
-                  required
-                  class="input-field"
-                  [class.input-error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
-                  [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
-                  [attr.aria-describedby]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched ? 'password-error' : null"
-                  placeholder="Enter your password"
-                />
-                @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
-                  <p id="password-error" class="mt-1.5 text-sm text-red-600 dark:text-red-400 flex items-center gap-1">
-                    <svg class="w-4 h-4 shrink-0" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                    @if (loginForm.get('password')?.hasError('required')) {
-                      <span>Password is required</span>
-                    } @else if (loginForm.get('password')?.hasError('minlength')) {
-                      <span>Password must be at least 8 characters</span>
-                    }
-                  </p>
-                }
-              </div>
-
-              <button
-                type="submit"
-                [disabled]="loginForm.invalid || authStore.isLoading()"
-                class="btn-primary w-full justify-center py-3 text-base"
-              >
-                @if (authStore.isLoading()) {
-                  <svg class="animate-spin -ml-1 mr-2 h-4 w-4" width="16" height="16" fill="none" viewBox="0 0 24 24">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  <span>Signing in...</span>
-                } @else {
-                  <span>Sign in</span>
-                }
-              </button>
-            </form>
-
-            <p class="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">
-              Don't have an account?
-              <a routerLink="/register" class="font-medium text-amber-600 hover:text-amber-500 dark:text-amber-400 dark:hover:text-amber-300 transition-colors">
-                Create one now
-              </a>
-            </p>
+          <!-- Footer -->
+          <div class="form-footer">
+            <span>Don't have an account?</span>
+            <a routerLink="/register" class="register-link">Create one now</a>
           </div>
         </div>
       </div>
     </div>
   `,
+  styles: [`
+    .auth-container {
+      min-height: 100vh;
+      display: flex;
+      position: relative;
+    }
+
+    /* Background */
+    .auth-background {
+      position: fixed;
+      inset: 0;
+      z-index: 0;
+    }
+
+    .bg-pattern {
+      position: absolute;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+      background-size: 40px 40px;
+    }
+
+    .bg-gradient {
+      position: absolute;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 0% 50%, rgba(13, 148, 136, 0.08) 0%, transparent 50%),
+        radial-gradient(ellipse 60% 80% at 100% 50%, rgba(251, 146, 60, 0.05) 0%, transparent 50%);
+    }
+
+    /* Brand Panel */
+    .brand-panel {
+      display: none;
+      width: 50%;
+      background: #0c0c0c;
+      position: relative;
+      overflow: hidden;
+    }
+
+    @media (min-width: 1024px) {
+      .brand-panel {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+    }
+
+    .brand-content {
+      position: relative;
+      z-index: 1;
+      padding: 4rem;
+      max-width: 480px;
+    }
+
+    /* Logo */
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 4rem;
+    }
+
+    .logo-mark {
+      width: 40px;
+      height: 40px;
+      color: #0d9488;
+    }
+
+    .logo-mark svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .logo-text {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.5rem;
+      font-weight: 600;
+      color: #fafafa;
+      letter-spacing: -0.02em;
+    }
+
+    /* Hero */
+    .hero-content {
+      margin-bottom: 3rem;
+    }
+
+    .hero-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: clamp(2rem, 3vw, 2.75rem);
+      font-weight: 500;
+      color: #fafafa;
+      letter-spacing: -0.02em;
+      line-height: 1.2;
+      margin: 0 0 1.5rem;
+    }
+
+    .hero-accent {
+      color: #0d9488;
+    }
+
+    .hero-desc {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 1rem;
+      color: #71717a;
+      line-height: 1.6;
+      margin: 0;
+    }
+
+    /* Features */
+    .features {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .feature {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      padding: 0.75rem 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 0.75rem;
+    }
+
+    .feature-icon {
+      width: 20px;
+      height: 20px;
+      color: #0d9488;
+    }
+
+    .feature-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .feature-text {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      color: #a1a1aa;
+    }
+
+    /* Brand Line */
+    .brand-line {
+      position: absolute;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      width: 1px;
+      background: linear-gradient(180deg, transparent 0%, rgba(13, 148, 136, 0.3) 50%, transparent 100%);
+    }
+
+    /* Form Panel */
+    .form-panel {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2rem;
+      background: #fafaf9;
+      position: relative;
+      z-index: 1;
+    }
+
+    .form-container {
+      width: 100%;
+      max-width: 400px;
+    }
+
+    /* Mobile Logo */
+    .mobile-logo {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.75rem;
+      margin-bottom: 3rem;
+    }
+
+    .mobile-logo .logo-mark {
+      width: 36px;
+      height: 36px;
+    }
+
+    .mobile-logo .logo-text {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #18181b;
+    }
+
+    @media (min-width: 1024px) {
+      .mobile-logo {
+        display: none;
+      }
+    }
+
+    /* Form Header */
+    .form-header {
+      margin-bottom: 2rem;
+    }
+
+    .form-eyebrow {
+      display: block;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: #0d9488;
+      text-transform: uppercase;
+      letter-spacing: 0.15em;
+      margin-bottom: 0.5rem;
+    }
+
+    .form-title {
+      font-family: 'Playfair Display', Georgia, serif;
+      font-size: 1.75rem;
+      font-weight: 500;
+      color: #18181b;
+      letter-spacing: -0.02em;
+      margin: 0 0 0.5rem;
+    }
+
+    .form-desc {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9375rem;
+      color: #71717a;
+      margin: 0;
+    }
+
+    /* Error Banner */
+    .error-banner {
+      display: flex;
+      align-items: flex-start;
+      gap: 0.75rem;
+      padding: 1rem;
+      background: #fef2f2;
+      border: 1px solid #fecaca;
+      border-radius: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .error-banner svg {
+      width: 20px;
+      height: 20px;
+      color: #dc2626;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+
+    .error-banner span {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      color: #b91c1c;
+    }
+
+    /* Form */
+    .auth-form {
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .form-label {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: #3f3f46;
+    }
+
+    .form-input {
+      width: 100%;
+      padding: 0.875rem 1rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9375rem;
+      color: #18181b;
+      background: #fff;
+      border: 1.5px solid #e4e4e7;
+      border-radius: 0.625rem;
+      transition: all 0.2s ease;
+    }
+
+    .form-input:focus {
+      outline: none;
+      border-color: #0d9488;
+      box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+    }
+
+    .form-input::placeholder {
+      color: #a1a1aa;
+    }
+
+    .form-input.input-error {
+      border-color: #dc2626;
+    }
+
+    .form-input.input-error:focus {
+      box-shadow: 0 0 0 3px rgba(220, 38, 38, 0.1);
+    }
+
+    .field-error {
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.8125rem;
+      color: #dc2626;
+    }
+
+    /* Submit Button */
+    .submit-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      width: 100%;
+      padding: 0.875rem 1.5rem;
+      margin-top: 0.5rem;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9375rem;
+      font-weight: 600;
+      color: #fff;
+      background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
+      border: none;
+      border-radius: 0.625rem;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      box-shadow: 0 2px 8px rgba(13, 148, 136, 0.3);
+    }
+
+    .submit-btn:hover:not(:disabled) {
+      background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px rgba(13, 148, 136, 0.4);
+    }
+
+    .submit-btn:disabled {
+      background: #d4d4d8;
+      color: #a1a1aa;
+      box-shadow: none;
+      cursor: not-allowed;
+      transform: none;
+    }
+
+    .btn-arrow {
+      font-size: 1.125rem;
+      transition: transform 0.2s ease;
+    }
+
+    .submit-btn:hover:not(:disabled) .btn-arrow {
+      transform: translateX(4px);
+    }
+
+    /* Spinner */
+    .spinner {
+      width: 18px;
+      height: 18px;
+      animation: spin 1s linear infinite;
+    }
+
+    .spinner-track {
+      opacity: 0.2;
+    }
+
+    .spinner-head {
+      opacity: 1;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* Footer */
+    .form-footer {
+      margin-top: 2rem;
+      text-align: center;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.875rem;
+      color: #71717a;
+    }
+
+    .register-link {
+      color: #0d9488;
+      text-decoration: none;
+      font-weight: 500;
+      margin-left: 0.25rem;
+      transition: color 0.2s ease;
+    }
+
+    .register-link:hover {
+      color: #0f766e;
+    }
+
+    /* Animations */
+    .form-container {
+      animation: fadeIn 0.5s ease-out;
+    }
+
+    .brand-content {
+      animation: slideIn 0.6s ease-out;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(-20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+  `],
 })
 export class LoginComponent implements OnInit {
   protected readonly authStore = inject(AuthStore);
