@@ -12,11 +12,11 @@ import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { AuditAction } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
-// Valid audit actions for validation - must match AuditAction type exactly
+// Valid audit actions for validation - compile-time verified against AuditAction type
 const VALID_ACTIONS = [
   'create', 'read', 'update', 'delete', 'login', 'login_failed',
   'logout', 'register', 'access_denied', 'status_change', 'reorder',
-] as const;
+] as const satisfies readonly AuditAction[];
 
 /**
  * Base class for audit log query parameters.

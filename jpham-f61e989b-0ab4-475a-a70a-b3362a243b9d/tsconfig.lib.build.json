@@ -2,7 +2,14 @@
   "compilerOptions": {
     "outDir": "../../dist/out-tsc",
     "declaration": true,
-    "types": ["node"]
+    "declarationMap": true,
+    "sourceMap": true,
+    "types": ["node"],
+    "module": "esnext",
+    "target": "es2020",
+    "moduleResolution": "node",
+    "strict": true,
+    "rootDir": "./src"
   },
   "include": ["src/**/*.ts"],
   "exclude": [
