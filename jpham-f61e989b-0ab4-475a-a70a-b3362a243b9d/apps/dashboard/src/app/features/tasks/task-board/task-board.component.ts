@@ -17,6 +17,7 @@ import {
   TaskStatus,
   CreateTaskDto,
   UpdateTaskDto,
+  hasMinimumRole,
 } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
 interface Column {
@@ -31,6 +32,7 @@ interface Column {
   selector: 'app-task-board',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrl: './task-board.component.scss',
   imports: [
     CommonModule,
     RouterLink,
@@ -67,15 +69,27 @@ interface Column {
               </p>
             </div>
           </div>
-          <button
-            (click)="openCreateModal()"
-            class="btn-primary create-btn"
-          >
-            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-            </svg>
-            <span>New Task</span>
-          </button>
+          @if (canCreateTask()) {
+            <button
+              (click)="openCreateModal()"
+              class="btn-primary create-btn"
+            >
+              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+              <span>New Task</span>
+            </button>
+          }
+          @if (displayRole()) {
+            <div
+              class="role-badge"
+              role="status"
+              [attr.aria-label]="'Current user role: ' + displayRole()"
+              [attr.title]="'Your role: ' + displayRole()"
+            >
+              <span class="role-label">{{ displayRole() }}</span>
+            </div>
+          }
         </div>
       </header>
 
@@ -131,6 +145,7 @@ interface Column {
                   @for (task of tasksByStatus()[column.status]; track task.id; let j = $index) {
                     <div
                       cdkDrag
+                      [cdkDragDisabled]="!canDragTasks()"
                       [cdkDragData]="task"
                       [cdkDragPreviewContainer]="'global'"
                       class="task-card-wrapper animate-fade-in-up"
@@ -165,326 +180,13 @@ interface Column {
     @if (showForm()) {
       <app-task-form
         [task]="selectedTask()"
+        [canDelete]="canDeleteTask()"
         (save)="onSave($event)"
         (delete)="onDelete()"
         (cancel)="closeForm()"
       />
     }
   `,
-  styles: [`
-    /* ===========================================
-       TASK BOARD COMPONENT STYLES
-       Using CSS variables from design system
-       =========================================== */
-
-    /* Base Container - Full viewport coverage */
-    .task-board-container {
-      min-height: 100vh;
-      height: 100vh;
-      display: flex;
-      flex-direction: column;
-      background: var(--color-primary-50);
-      position: relative;
-      overflow: hidden;
-    }
-
-    :host-context(.dark) .task-board-container {
-      background: var(--color-primary-950);
-    }
-
-    /* Header content layout */
-    .board-header .header-content {
-      max-width: 100%;
-      margin: 0 auto;
-      padding: var(--space-lg) var(--space-2xl);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: var(--space-2xl);
-    }
-
-    .header-left {
-      display: flex;
-      align-items: center;
-      gap: var(--space-lg);
-    }
-
-    .back-btn {
-      width: 40px;
-      height: 40px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      background: var(--color-primary-100);
-      border-radius: var(--radius-md);
-      color: var(--color-primary-500);
-      text-decoration: none;
-      transition: all 0.2s ease;
-    }
-
-    .back-btn:hover {
-      background: #fef3c7;
-      color: #d97706;
-    }
-
-    :host-context(.dark) .back-btn {
-      background: var(--color-primary-800);
-      color: var(--color-primary-400);
-    }
-
-    :host-context(.dark) .back-btn:hover {
-      background: rgba(217, 119, 6, 0.2);
-      color: #fbbf24;
-    }
-
-    .header-text {
-      display: flex;
-      flex-direction: column;
-    }
-
-    .board-title {
-      font-size: 1.5rem;
-      font-weight: 600;
-      color: var(--color-primary-900);
-      letter-spacing: -0.02em;
-      margin: 0;
-      line-height: 1.2;
-    }
-
-    :host-context(.dark) .board-title {
-      color: var(--color-primary-50);
-    }
-
-    .board-subtitle {
-      font-family: var(--font-body);
-      font-size: 0.8125rem;
-      color: var(--color-primary-500);
-      margin: 0.125rem 0 0;
-    }
-
-    .create-btn {
-      gap: var(--space-sm);
-    }
-
-    /* Error Banner */
-    .error-banner {
-      margin: var(--space-lg) var(--space-2xl);
-      padding: var(--space-lg);
-      background: #fef2f2;
-      border: 1px solid #fecaca;
-      border-radius: var(--radius-lg);
-      display: flex;
-      align-items: center;
-      gap: var(--space-md);
-      color: #dc2626;
-    }
-
-    :host-context(.dark) .error-banner {
-      background: rgba(220, 38, 38, 0.1);
-      border-color: rgba(220, 38, 38, 0.3);
-    }
-
-    .error-banner p {
-      margin: 0;
-      font-size: 0.875rem;
-    }
-
-    /* Main Board Area - Fills remaining space */
-    .board-main {
-      flex: 1;
-      position: relative;
-      z-index: var(--z-content);
-      padding: var(--space-xl) var(--space-2xl) var(--space-2xl);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    /* Loading State - uses global spinner */
-    .loading-state {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      gap: var(--space-lg);
-    }
-
-    .loading-state p {
-      font-family: var(--font-body);
-      font-size: 0.875rem;
-      color: var(--color-primary-500);
-      margin: 0;
-    }
-
-    /* Columns Grid - Full width, fills height */
-    .columns-grid {
-      flex: 1;
-      display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: var(--space-xl);
-      min-height: 0;
-    }
-
-    @media (max-width: 1280px) {
-      .columns-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width: 768px) {
-      .columns-grid {
-        grid-template-columns: 1fr;
-      }
-
-      /* On mobile, let the main container scroll instead of individual columns */
-      .board-main {
-        overflow-y: auto;
-      }
-
-      .board-header .header-content {
-        padding: var(--space-md) var(--space-lg);
-      }
-
-      .board-main {
-        padding: var(--space-lg);
-      }
-    }
-
-    /* Kanban Column - extends global kanban-column */
-    .kanban-column {
-      display: flex;
-      flex-direction: column;
-      border-radius: var(--radius-xl);
-      padding: var(--space-lg);
-      min-height: 0;
-    }
-
-    /* Column Header */
-    .column-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      padding-bottom: var(--space-md);
-      margin-bottom: var(--space-md);
-      border-bottom: 1px solid rgba(0, 0, 0, 0.06);
-      flex-shrink: 0;
-    }
-
-    :host-context(.dark) .column-header {
-      border-bottom-color: rgba(255, 255, 255, 0.06);
-    }
-
-    .column-title-group {
-      display: flex;
-      align-items: center;
-      gap: var(--space-sm);
-    }
-
-    .column-icon {
-      width: 32px;
-      height: 32px;
-      border-radius: var(--radius-sm);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 1rem;
-    }
-
-    .column-title {
-      font-size: 0.9375rem;
-      font-weight: 500;
-      color: var(--color-primary-900);
-      margin: 0;
-    }
-
-    :host-context(.dark) .column-title {
-      color: var(--color-primary-50);
-    }
-
-    .column-count {
-      min-width: 24px;
-      height: 24px;
-      padding: 0 var(--space-sm);
-    }
-
-    /* Drop Zone - Scrollable area for tasks */
-    .drop-zone {
-      flex: 1;
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-sm);
-      min-height: 80px;
-      overflow-y: auto;
-      padding-right: var(--space-xs);
-    }
-
-    /* Custom scrollbar for drop zone */
-    .drop-zone::-webkit-scrollbar {
-      width: 4px;
-    }
-
-    .drop-zone::-webkit-scrollbar-thumb {
-      background: var(--color-primary-300);
-      border-radius: 2px;
-    }
-
-    :host-context(.dark) .drop-zone::-webkit-scrollbar-thumb {
-      background: var(--color-primary-700);
-    }
-
-    /* Task Card Wrapper */
-    .task-card-wrapper {
-      /* Inherits animation from global animate-fade-in-up */
-      position: relative;
-    }
-
-    /* Hide original card while dragging - the placeholder takes its place */
-    .task-card-wrapper.cdk-drag-dragging > app-task-card {
-      opacity: 0;
-    }
-
-    /* Status-specific accent colors for column icons */
-    .status-todo { background: var(--status-todo-bg); }
-    .status-progress { background: var(--status-progress-bg); }
-    .status-review { background: var(--status-review-bg); }
-    .status-done { background: var(--status-done-bg); }
-
-    :host-context(.dark) .status-todo { background: rgba(100, 116, 139, 0.3); }
-    :host-context(.dark) .status-progress { background: rgba(30, 64, 175, 0.4); }
-    :host-context(.dark) .status-review { background: rgba(180, 83, 9, 0.4); }
-    :host-context(.dark) .status-done { background: rgba(6, 95, 70, 0.4); }
-
-    /* Legacy accent color support (from column config) */
-    .bg-slate-100 { background: var(--status-todo-bg); }
-    .bg-blue-100 { background: var(--status-progress-bg); }
-    .bg-amber-100 { background: var(--status-review-bg); }
-    .bg-emerald-100 { background: var(--status-done-bg); }
-
-    :host-context(.dark) .bg-slate-100,
-    :host-context(.dark) .dark\\:bg-slate-800 { background: rgba(100, 116, 139, 0.3); }
-    :host-context(.dark) .bg-blue-100,
-    :host-context(.dark) .dark\\:bg-blue-900\\/40 { background: rgba(30, 64, 175, 0.4); }
-    :host-context(.dark) .bg-amber-100,
-    :host-context(.dark) .dark\\:bg-amber-900\\/40 { background: rgba(180, 83, 9, 0.4); }
-    :host-context(.dark) .bg-emerald-100,
-    :host-context(.dark) .dark\\:bg-emerald-900\\/40 { background: rgba(6, 95, 70, 0.4); }
-
-    /* Badge colors for column counts */
-    .bg-slate-200 { background: #e2e8f0; color: var(--status-todo-text); }
-    .bg-blue-100.text-blue-700 { background: var(--status-progress-bg); color: var(--status-progress-text); }
-    .bg-amber-100.text-amber-700 { background: var(--status-review-bg); color: var(--status-review-text); }
-    .bg-emerald-100.text-emerald-700 { background: var(--status-done-bg); color: var(--status-done-text); }
-
-    :host-context(.dark) .bg-slate-200,
-    :host-context(.dark) .dark\\:bg-slate-700 { background: #334155; color: #cbd5e1; }
-    :host-context(.dark) .bg-blue-100.text-blue-700,
-    :host-context(.dark) .dark\\:bg-blue-900\\/60 { background: rgba(30, 64, 175, 0.6); color: #93c5fd; }
-    :host-context(.dark) .bg-amber-100.text-amber-700,
-    :host-context(.dark) .dark\\:bg-amber-900\\/60 { background: rgba(180, 83, 9, 0.6); color: #fcd34d; }
-    :host-context(.dark) .bg-emerald-100.text-emerald-700,
-    :host-context(.dark) .dark\\:bg-emerald-900\\/60 { background: rgba(6, 95, 70, 0.6); color: #6ee7b7; }
-  `],
 })
 export class TaskBoardComponent implements OnInit {
   protected readonly authStore = inject(AuthStore);
@@ -534,6 +236,30 @@ export class TaskBoardComponent implements OnInit {
     done: this.tasksStore.doneTasks(),
   }));
 
+  /**
+   * RBAC: Base permission check for admin-level actions.
+   * Used for create, update, delete operations.
+   *
+   * SECURITY NOTE: Frontend checks are for UX only.
+   * All RBAC enforcement happens server-side via guards and service methods.
+   */
+  protected readonly hasAdminAccess = computed(() => {
+    const role = this.authStore.userRole();
+    return role ? hasMinimumRole(role, 'admin') : false;
+  });
+
+  // RBAC permissions derived from base check
+  protected readonly canCreateTask = this.hasAdminAccess;
+  protected readonly canDeleteTask = this.hasAdminAccess;
+  protected readonly canEditTask = this.hasAdminAccess;
+  protected readonly canDragTasks = this.hasAdminAccess;
+
+  // Display role with null safety
+  protected readonly displayRole = computed(() => {
+    const role = this.authStore.userRole();
+    return role ? role.charAt(0).toUpperCase() + role.slice(1) : '';
+  });
+
   ngOnInit() {
     const organizationId = this.authStore.organizationId();
     if (organizationId) {
@@ -543,7 +269,11 @@ export class TaskBoardComponent implements OnInit {
 
   onDrop(event: CdkDragDrop<ITask[]>) {
     const organizationId = this.authStore.organizationId();
-    if (!organizationId) return;
+
+    // RBAC: Only admin and owner can update task status
+    if (!organizationId || !this.canDragTasks()) {
+      return;
+    }
 
     const task = event.item.data as ITask;
     const newStatus = event.container.id as TaskStatus;
@@ -562,6 +292,10 @@ export class TaskBoardComponent implements OnInit {
   }
 
   openEditModal(task: ITask) {
+    // RBAC: Only admin and owner can edit tasks
+    if (!this.canEditTask()) {
+      return;
+    }
     this.selectedTask.set(task);
     this.showForm.set(true);
   }

@@ -3,6 +3,7 @@ import {
   NestInterceptor,
   ExecutionContext,
   CallHandler,
+  Logger,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
@@ -23,6 +24,8 @@ const AUDITED_RESOURCES = ['tasks', 'organizations'];
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
+  private readonly logger = new Logger(AuditInterceptor.name);
+
   constructor(private readonly auditService: AuditService) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -49,39 +52,48 @@ export class AuditInterceptor implements NestInterceptor {
     return next.handle().pipe(
       tap({
         next: (response) => {
-          // Log successful operation
-          this.auditService.log({
-            action,
-            resource,
-            resourceId: resourceId || (response as { id?: string })?.id || null,
-            userId: user?.id ?? null,
-            organizationId: organizationId ?? user?.organizationId ?? null,
-            ipAddress: this.getClientIp(request),
-            userAgent: request.get('user-agent') ?? null,
-            metadata: {
-              method,
-              path,
-              statusCode: 200,
-            },
-          });
+          // Log successful operation - wrapped in try-catch to prevent audit failures from affecting requests
+          this.auditService
+            .log({
+              action,
+              resource,
+              resourceId:
+                resourceId || (response as { id?: string })?.id || null,
+              userId: user?.id ?? null,
+              organizationId: organizationId ?? user?.organizationId ?? null,
+              ipAddress: this.getClientIp(request),
+              userAgent: request.get('user-agent') ?? null,
+              metadata: {
+                method,
+                path,
+                statusCode: 200,
+              },
+            })
+            .catch((err) => {
+              this.logger.error(`Failed to log audit entry: ${err.message}`);
+            });
         },
         error: (error) => {
-          // Log failed operation
-          this.auditService.log({
-            action: 'access_denied',
-            resource,
-            resourceId,
-            userId: user?.id ?? null,
-            organizationId: organizationId ?? user?.organizationId ?? null,
-            ipAddress: this.getClientIp(request),
-            userAgent: request.get('user-agent') ?? null,
-            metadata: {
-              method,
-              path,
-              error: error.message,
-              statusCode: error.status || 500,
-            },
-          });
+          // Log failed operation - wrapped in try-catch to prevent audit failures from affecting requests
+          this.auditService
+            .log({
+              action: 'access_denied',
+              resource,
+              resourceId,
+              userId: user?.id ?? null,
+              organizationId: organizationId ?? user?.organizationId ?? null,
+              ipAddress: this.getClientIp(request),
+              userAgent: request.get('user-agent') ?? null,
+              metadata: {
+                method,
+                path,
+                error: error.message,
+                statusCode: error.status || 500,
+              },
+            })
+            .catch((err) => {
+              this.logger.error(`Failed to log audit entry: ${err.message}`);
+            });
         },
       }),
     );

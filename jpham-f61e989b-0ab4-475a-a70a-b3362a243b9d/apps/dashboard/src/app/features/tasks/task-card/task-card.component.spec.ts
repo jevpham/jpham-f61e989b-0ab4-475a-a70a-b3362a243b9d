@@ -81,7 +81,8 @@ describe('TaskCardComponent', () => {
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      expect(compiled.textContent).toContain('urgent');
+      // Component displays 'Urgent' (capitalized label) from PRIORITY_CONFIG
+      expect(compiled.textContent).toContain('Urgent');
     });
 
     it('should display "No due date" when dueDate is null', () => {
@@ -134,12 +135,13 @@ describe('TaskCardComponent', () => {
   });
 
   describe('Accessibility', () => {
-    it('should have cursor-pointer class for clickable area', () => {
+    it('should have task-card class for clickable area with cursor:grab', () => {
       fixture.componentRef.setInput('task', createMockTask());
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      const card = compiled.querySelector('.cursor-pointer');
+      // Component uses .task-card with cursor:grab for drag-and-drop
+      const card = compiled.querySelector('.task-card');
 
       expect(card).toBeTruthy();
     });
@@ -177,8 +179,8 @@ describe('TaskCardComponent', () => {
       fixture.detectChanges();
 
       const compiled = fixture.nativeElement as HTMLElement;
-      // The line-clamp class should handle truncation
-      const titleEl = compiled.querySelector('.line-clamp-2');
+      // Component uses BEM class .task-card__title with CSS-based line clamping
+      const titleEl = compiled.querySelector('.task-card__title');
       expect(titleEl).toBeTruthy();
     });
 

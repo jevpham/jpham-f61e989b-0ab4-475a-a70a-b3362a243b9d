@@ -46,52 +46,19 @@ export class AuditService {
     return this.auditLogRepository.save(auditLog);
   }
 
-  async findByOrganization(
-    organizationId: string,
-    filters?: Omit<AuditLogFilters, 'organizationId'>,
-    page = 1,
-    limit = 50,
-  ): Promise<{ data: IAuditLog[]; total: number }> {
-    const where: Record<string, unknown> = { organizationId };
+  /**
+   * Build common filter conditions for audit log queries.
+   * Eliminates DRY violation by centralizing filter logic.
+   */
+  private buildFilterConditions(
+    baseWhere: Record<string, unknown>,
+    filters?: Partial<AuditLogFilters>,
+  ): Record<string, unknown> {
+    const where = { ...baseWhere };
 
     if (filters?.userId) {
       where['userId'] = filters.userId;
     }
-    if (filters?.action) {
-      where['action'] = filters.action;
-    }
-    if (filters?.resource) {
-      where['resource'] = filters.resource;
-    }
-    if (filters?.startDate && filters?.endDate) {
-      where['createdAt'] = Between(filters.startDate, filters.endDate);
-    } else if (filters?.startDate) {
-      where['createdAt'] = MoreThanOrEqual(filters.startDate);
-    } else if (filters?.endDate) {
-      where['createdAt'] = LessThanOrEqual(filters.endDate);
-    }
-
-    const [data, total] = await this.auditLogRepository.findAndCount({
-      where,
-      order: { createdAt: 'DESC' },
-      skip: (page - 1) * limit,
-      take: limit,
-    });
-
-    return {
-      data: data.map((log) => this.toResponse(log)),
-      total,
-    };
-  }
-
-  async findByUser(
-    userId: string,
-    filters?: Omit<AuditLogFilters, 'userId'>,
-    page = 1,
-    limit = 50,
-  ): Promise<{ data: IAuditLog[]; total: number }> {
-    const where: Record<string, unknown> = { userId };
-
     if (filters?.organizationId) {
       where['organizationId'] = filters.organizationId;
     }
@@ -109,8 +76,20 @@ export class AuditService {
       where['createdAt'] = LessThanOrEqual(filters.endDate);
     }
 
+    return where;
+  }
+
+  /**
+   * Execute paginated audit log query with common options.
+   */
+  private async executeQuery(
+    where: Record<string, unknown>,
+    page: number,
+    limit: number,
+  ): Promise<{ data: IAuditLog[]; total: number }> {
     const [data, total] = await this.auditLogRepository.findAndCount({
       where,
+      relations: ['user'],
       order: { createdAt: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
@@ -120,6 +99,26 @@ export class AuditService {
       data: data.map((log) => this.toResponse(log)),
       total,
     };
+  }
+
+  async findByOrganization(
+    organizationId: string,
+    filters?: Omit<AuditLogFilters, 'organizationId'>,
+    page = 1,
+    limit = 50,
+  ): Promise<{ data: IAuditLog[]; total: number }> {
+    const where = this.buildFilterConditions({ organizationId }, filters);
+    return this.executeQuery(where, page, limit);
+  }
+
+  async findByUser(
+    userId: string,
+    filters?: Omit<AuditLogFilters, 'userId'>,
+    page = 1,
+    limit = 50,
+  ): Promise<{ data: IAuditLog[]; total: number }> {
+    const where = this.buildFilterConditions({ userId }, filters);
+    return this.executeQuery(where, page, limit);
   }
 
   private toResponse(log: AuditLog): IAuditLog {
@@ -134,6 +133,16 @@ export class AuditService {
       userAgent: log.userAgent,
       metadata: log.metadata,
       createdAt: log.createdAt,
+      user: log.user
+        ? {
+            id: log.user.id,
+            email: log.user.email,
+            role: log.user.role,
+            organizationId: log.user.organizationId,
+            createdAt: log.user.createdAt,
+            updatedAt: log.user.updatedAt,
+          }
+        : undefined,
     };
   }
 }

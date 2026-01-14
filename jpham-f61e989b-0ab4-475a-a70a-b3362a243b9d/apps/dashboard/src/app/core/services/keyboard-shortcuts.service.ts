@@ -23,28 +23,29 @@ export class KeyboardShortcutsService {
 
   readonly shortcutTriggered$ = new Subject<string>();
 
+  // Using Alt modifier to avoid conflicts with browser shortcuts (Ctrl+T, Ctrl+D, etc.)
   private shortcuts: KeyboardShortcut[] = [
     {
       key: 'd',
-      ctrl: true,
+      alt: true,
       description: 'Toggle dark mode',
       action: () => this.themeService.toggleDarkMode(),
     },
     {
       key: 'h',
-      ctrl: true,
+      alt: true,
       description: 'Go to dashboard',
       action: () => this.router.navigate(['/dashboard']),
     },
     {
       key: 't',
-      ctrl: true,
+      alt: true,
       description: 'Go to task board',
       action: () => this.router.navigate(['/tasks']),
     },
     {
       key: 'a',
-      ctrl: true,
+      alt: true,
       shift: true,
       description: 'Go to audit logs',
       action: () => this.router.navigate(['/audit']),
