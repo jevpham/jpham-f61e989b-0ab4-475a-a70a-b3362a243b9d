@@ -53,120 +53,67 @@ const CATEGORY_CONFIG: Record<TaskCategory, { classes: string; icon: string }> =
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule, DatePipe],
+  styleUrl: './task-card.component.scss',
   template: `
-    <div
-      class="group relative bg-white dark:bg-slate-800/80 rounded-xl cursor-pointer
-             shadow-soft hover:shadow-elevated
-             border border-slate-200/60 dark:border-slate-700/40
-             hover:border-amber-300/60 dark:hover:border-amber-600/40
-             transition-all duration-300 ease-out
-             hover:-translate-y-0.5
-             focus-visible:outline-2 focus-visible:outline-amber-500 focus-visible:outline-offset-2"
-      tabindex="0"
-      role="button"
-      [attr.aria-label]="'Edit task: ' + task().title"
-      (click)="onEdit()"
-      (keydown.enter)="onEdit()"
-      (keydown.space)="onEdit(); $event.preventDefault()"
-    >
-      <!-- Priority indicator bar -->
-      <div
-        class="absolute top-0 left-4 right-4 h-0.5 rounded-full transition-all duration-300"
-        [ngClass]="priorityBarColor()"
-      ></div>
+    <article class="task-card" (click)="onEdit()" (keydown.enter)="onEdit()" (keydown.space)="onEdit(); $event.preventDefault()" tabindex="0" role="button" [attr.aria-label]="'Edit task: ' + task().title">
+      <!-- Left accent strip based on priority -->
+      <div class="task-card__accent" [attr.data-priority]="task().priority"></div>
 
-      <div class="p-4 pt-5">
-        <!-- Header with title and badges -->
-        <div class="flex items-start justify-between gap-3 mb-3">
-          <h4 class="text-sm font-medium text-slate-800 dark:text-slate-100 line-clamp-2 leading-snug group-hover:text-slate-900 dark:group-hover:text-white transition-colors">
-            {{ task().title }}
-          </h4>
-        </div>
+      <div class="task-card__content">
+        <!-- Title -->
+        <h4 class="task-card__title">{{ task().title }}</h4>
 
         <!-- Tags row -->
-        <div class="flex flex-wrap gap-1.5 mb-3">
-          <span
-            class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md"
-            [ngClass]="categoryConfig().classes"
-          >
-            <span class="text-xs">{{ categoryConfig().icon }}</span>
+        <div class="task-card__tags">
+          <span class="task-card__tag task-card__tag--category" [attr.data-category]="task().category">
+            <span class="task-card__tag-icon">{{ categoryConfig().icon }}</span>
             {{ task().category }}
           </span>
-          <span
-            class="inline-flex items-center gap-1 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider rounded-md"
-            [ngClass]="priorityConfig().classes"
-          >
-            <span class="text-[8px]">{{ priorityConfig().icon }}</span>
+          <span class="task-card__tag task-card__tag--priority" [attr.data-priority]="task().priority">
+            <span class="task-card__tag-icon">{{ priorityConfig().icon }}</span>
             {{ priorityConfig().label }}
           </span>
         </div>
 
+        <!-- Description (if exists) -->
         @if (task().description) {
-          <p class="text-xs text-slate-500 dark:text-slate-400 mb-3 line-clamp-2 leading-relaxed">
-            {{ task().description }}
-          </p>
+          <p class="task-card__description">{{ task().description }}</p>
         }
 
-        <!-- Footer with metadata -->
-        <div class="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-700/40">
-          <!-- Due date -->
-          <div class="flex items-center gap-1.5">
+        <!-- Footer -->
+        <div class="task-card__footer">
+          <div class="task-card__meta">
             @if (task().dueDate) {
-              <svg
-                class="w-3.5 h-3.5"
-                [class.text-red-500]="isOverdue()"
-                [class.text-slate-400]="!isOverdue()"
-                [class.dark:text-slate-500]="!isOverdue()"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                stroke-width="2"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-              </svg>
-              <span
-                class="text-xs font-medium"
-                [class.text-red-500]="isOverdue()"
-                [class.text-slate-500]="!isOverdue()"
-                [class.dark:text-slate-400]="!isOverdue()"
-              >
+              <span class="task-card__date" [class.task-card__date--overdue]="isOverdue()">
+                <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
                 {{ task().dueDate | date:'MMM d' }}
               </span>
               @if (isOverdue()) {
-                <span class="text-[9px] font-semibold uppercase tracking-wider text-red-500 bg-red-50 dark:bg-red-900/30 px-1.5 py-0.5 rounded">
-                  Overdue
-                </span>
+                <span class="task-card__overdue-badge">Overdue</span>
               }
             } @else {
-              <span class="text-xs text-slate-400 dark:text-slate-500 italic">No due date</span>
+              <span class="task-card__no-date">No due date</span>
             }
           </div>
 
-          <!-- Assignee -->
           @if (task().assignee) {
-            <div class="flex items-center gap-1.5" [title]="task().assignee!.email || 'Unknown'">
-              <div class="w-5 h-5 rounded-full bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center">
-                <span class="text-[9px] font-bold text-white uppercase">
-                  {{ assigneeInitial() }}
-                </span>
-              </div>
-              <span class="text-xs text-slate-500 dark:text-slate-400 truncate max-w-20">
-                {{ assigneeDisplayName() }}
-              </span>
+            <div class="task-card__assignee" [title]="task().assignee!.email || 'Unknown'">
+              <div class="task-card__avatar">{{ assigneeInitial() }}</div>
+              <span class="task-card__assignee-name">{{ assigneeDisplayName() }}</span>
             </div>
           }
         </div>
       </div>
 
       <!-- Hover edit indicator -->
-      <div class="absolute top-3 right-3 opacity-0 group-hover:opacity-100 group-focus-visible:opacity-100 transition-opacity duration-200">
-        <div class="w-6 h-6 rounded-lg bg-amber-100 dark:bg-amber-900/40 flex items-center justify-center">
-          <svg class="w-3 h-3 text-amber-600 dark:text-amber-400" width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-          </svg>
-        </div>
+      <div class="task-card__edit-hint">
+        <svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+        </svg>
       </div>
-    </div>
+    </article>
   `,
 })
 export class TaskCardComponent {
@@ -175,16 +122,6 @@ export class TaskCardComponent {
 
   protected readonly priorityConfig = computed(() => PRIORITY_CONFIG[this.task().priority]);
   protected readonly categoryConfig = computed(() => CATEGORY_CONFIG[this.task().category]);
-
-  protected readonly priorityBarColor = computed(() => {
-    const priority = this.task().priority;
-    switch (priority) {
-      case 'urgent': return 'bg-red-500';
-      case 'high': return 'bg-orange-500';
-      case 'medium': return 'bg-blue-500';
-      default: return 'bg-slate-300 dark:bg-slate-600';
-    }
-  });
 
   // Safely get assignee initial with fallback
   protected readonly assigneeInitial = computed(() => {

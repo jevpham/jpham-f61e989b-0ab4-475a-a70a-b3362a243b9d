@@ -1,230 +1,326 @@
-import { Component, OnInit, OnDestroy, inject } from '@angular/core';
+import { Component, OnInit, inject, DestroyRef, computed, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
-import { Subscription } from 'rxjs';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { MatToolbarModule } from '@angular/material/toolbar';
+import { MatButtonModule } from '@angular/material/button';
+import { MatIconModule } from '@angular/material/icon';
+import { MatCardModule } from '@angular/material/card';
+import { MatProgressBarModule } from '@angular/material/progress-bar';
+import { MatTooltipModule } from '@angular/material/tooltip';
+import { MatMenuModule } from '@angular/material/menu';
+import { MatDividerModule } from '@angular/material/divider';
+import { MatRippleModule } from '@angular/material/core';
 import { AuthStore } from '../../store/auth/auth.store';
 import { TasksStore } from '../../store/tasks/tasks.store';
-import { HeaderComponent } from '../../shared/components/header/header.component';
-import { TaskStatsComponent } from '../../shared/components/task-stats/task-stats.component';
 import { KeyboardShortcutsDialogComponent } from '../../shared/components/keyboard-shortcuts-dialog/keyboard-shortcuts-dialog.component';
 import { KeyboardShortcutsService } from '../../core/services/keyboard-shortcuts.service';
+import { ThemeService } from '../../core/services/theme.service';
 
 @Component({
   selector: 'app-dashboard',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [
     CommonModule,
     RouterLink,
-    HeaderComponent,
-    TaskStatsComponent,
+    MatToolbarModule,
+    MatButtonModule,
+    MatIconModule,
+    MatCardModule,
+    MatProgressBarModule,
+    MatTooltipModule,
+    MatMenuModule,
+    MatDividerModule,
+    MatRippleModule,
     KeyboardShortcutsDialogComponent,
   ],
   template: `
-    <div class="min-h-screen gradient-mesh-light dark:gradient-mesh-dark grain-overlay">
-      <!-- Header -->
-      <app-header title="Task Manager">
-        <span slot="subtitle" class="ml-3 badge bg-amber-100 text-amber-700 dark:bg-amber-900/50 dark:text-amber-300">
-          {{ authStore.userRole() }}
-        </span>
-        <button
-          slot="actions"
-          (click)="logout()"
-          class="btn-secondary text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 border-red-200 dark:border-red-800/40"
-        >
-          <svg class="w-4 h-4 mr-2" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-          </svg>
-          Logout
-        </button>
-      </app-header>
+    <div class="dashboard-container">
+      <!-- Decorative Elements -->
+      <div class="decorative-grid"></div>
+      <div class="decorative-accent"></div>
 
-      <!-- Main content -->
-      <main class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 relative z-10">
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <!-- Left column - Navigation cards -->
-          <div class="lg:col-span-2 space-y-8">
-            <!-- Welcome section -->
-            <div class="animate-fade-in-up">
-              <h2 class="font-display text-3xl font-semibold text-slate-900 dark:text-white tracking-tight mb-2">
-                Welcome back
-              </h2>
-              <p class="text-slate-500 dark:text-slate-400">
-                Here's what's happening with your tasks today.
-              </p>
+      <!-- Editorial Header -->
+      <header class="dashboard-header">
+        <div class="header-content">
+          <div class="header-left">
+            <div class="logo-mark">
+              <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+                <rect x="2" y="2" width="28" height="28" rx="6" stroke="currentColor" stroke-width="2.5"/>
+                <path d="M10 16L14 20L22 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
             </div>
-
-            <!-- Navigation cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <!-- Tasks card -->
-              <a
-                routerLink="/tasks"
-                class="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 shadow-soft hover:shadow-elevated border border-slate-200/60 dark:border-slate-700/40 transition-all duration-300 hover:-translate-y-1 animate-fade-in-up stagger-1"
-              >
-                <!-- Decorative gradient -->
-                <div class="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-amber-400/20 to-transparent rounded-bl-full"></div>
-
-                <div class="relative p-6">
-                  <div class="flex items-start justify-between mb-4">
-                    <div class="w-12 h-12 rounded-xl bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg shadow-amber-500/20">
-                      <svg class="w-6 h-6 text-white" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-6 9l2 2 4-4" />
-                      </svg>
-                    </div>
-                    <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <svg class="w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform group-hover:translate-x-0.5" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                      </svg>
-                    </div>
-                  </div>
-
-                  <h3 class="font-display text-lg font-semibold text-slate-900 dark:text-white mb-1">
-                    Task Board
-                  </h3>
-                  <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                    Manage your tasks with drag-and-drop Kanban board
-                  </p>
-
-                  <div class="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
-                    <span class="flex items-center gap-1">
-                      <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                      {{ tasksStore.taskCount() }} tasks
-                    </span>
-                    <span class="text-slate-300 dark:text-slate-600">•</span>
-                    <span>{{ tasksStore.completionRate() }}% complete</span>
-                  </div>
-                </div>
-              </a>
-
-              <!-- Audit logs card (admin only) -->
-              @if (authStore.userRole() === 'admin' || authStore.userRole() === 'owner') {
-                <a
-                  routerLink="/audit"
-                  class="group relative overflow-hidden rounded-2xl bg-white dark:bg-slate-800/80 shadow-soft hover:shadow-elevated border border-slate-200/60 dark:border-slate-700/40 transition-all duration-300 hover:-translate-y-1 animate-fade-in-up stagger-2"
-                >
-                  <!-- Decorative gradient -->
-                  <div class="absolute top-0 right-0 w-32 h-32 bg-linear-to-br from-emerald-400/20 to-transparent rounded-bl-full"></div>
-
-                  <div class="relative p-6">
-                    <div class="flex items-start justify-between mb-4">
-                      <div class="w-12 h-12 rounded-xl bg-linear-to-br from-emerald-400 to-emerald-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
-                        <svg class="w-6 h-6 text-white" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                        </svg>
-                      </div>
-                      <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                        <svg class="w-4 h-4 text-slate-500 dark:text-slate-400 transition-transform group-hover:translate-x-0.5" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
-                        </svg>
-                      </div>
-                    </div>
-
-                    <h3 class="font-display text-lg font-semibold text-slate-900 dark:text-white mb-1">
-                      Audit Logs
-                    </h3>
-                    <p class="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                      Track all system activity and changes
-                    </p>
-
-                    <div class="flex items-center gap-2 text-xs text-slate-400 dark:text-slate-500">
-                      <span class="flex items-center gap-1">
-                        <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
-                        Admin access
-                      </span>
-                      <span class="text-slate-300 dark:text-slate-600">•</span>
-                      <span>View activity</span>
-                    </div>
-                  </div>
-                </a>
-              }
-            </div>
-
-            <!-- User info card -->
-            <div class="rounded-2xl bg-white dark:bg-slate-800/80 shadow-soft border border-slate-200/60 dark:border-slate-700/40 overflow-hidden animate-fade-in-up stagger-3">
-              <div class="p-6">
-                <div class="flex items-center gap-4 mb-4">
-                  <div class="w-12 h-12 rounded-xl bg-linear-to-br from-slate-600 to-slate-800 dark:from-slate-500 dark:to-slate-700 flex items-center justify-center">
-                    <span class="text-lg font-bold text-white uppercase">
-                      {{ authStore.user()?.email?.charAt(0) }}
-                    </span>
-                  </div>
-                  <div>
-                    <h3 class="font-display font-semibold text-slate-900 dark:text-white">
-                      {{ authStore.user()?.email }}
-                    </h3>
-                    <p class="text-sm text-slate-500 dark:text-slate-400">
-                      {{ authStore.userRole() | titlecase }} account
-                    </p>
-                  </div>
-                </div>
-
-                <div class="flex items-center gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-900/50">
-                  <svg class="w-5 h-5 text-slate-400" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                  </svg>
-                  <div class="flex-1">
-                    <p class="text-xs text-slate-500 dark:text-slate-400">Organization ID</p>
-                    <code class="text-xs font-mono text-slate-700 dark:text-slate-300">{{ authStore.organizationId() }}</code>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Keyboard shortcuts hint -->
-              <div class="px-6 py-4 bg-slate-50 dark:bg-slate-900/50 border-t border-slate-100 dark:border-slate-700/40">
-                <div class="flex items-center gap-3">
-                  <svg class="w-5 h-5 text-slate-400" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
-                  </svg>
-                  <p class="text-sm text-slate-500 dark:text-slate-400">
-                    Press
-                    <kbd class="mx-1 px-2 py-0.5 text-xs font-semibold bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-md border border-slate-200 dark:border-slate-600 shadow-sm">
-                      Shift + ?
-                    </kbd>
-                    to view keyboard shortcuts
-                  </p>
-                </div>
-              </div>
+            <div class="logo-text">
+              <span class="brand-name">TaskFlow</span>
+              <span class="brand-edition">Editorial</span>
             </div>
           </div>
 
-          <!-- Right column - Task Stats -->
-          <div class="animate-fade-in-up stagger-4">
-            <app-task-stats />
+          <nav class="header-nav">
+            <a routerLink="/tasks" class="nav-link">Board</a>
+            @if (authStore.userRole() === 'admin' || authStore.userRole() === 'owner') {
+              <a routerLink="/audit" class="nav-link">Audit</a>
+            }
+          </nav>
+
+          <div class="header-right">
+            <div class="role-indicator" [attr.data-role]="authStore.userRole()">
+              <span class="role-dot"></span>
+              <span class="role-text">{{ authStore.userRole() }}</span>
+            </div>
+
+            <button
+              class="theme-btn"
+              (click)="themeService.toggleDarkMode()"
+              [matTooltip]="themeService.isDark() ? 'Light mode' : 'Dark mode'"
+              [attr.aria-label]="themeService.isDark() ? 'Switch to light mode' : 'Switch to dark mode'">
+              @if (themeService.isDark()) {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <circle cx="12" cy="12" r="5"/>
+                  <path d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+                </svg>
+              } @else {
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/>
+                </svg>
+              }
+            </button>
+
+            <button [matMenuTriggerFor]="userMenu" class="avatar-btn" aria-label="User menu">
+              <span aria-hidden="true">{{ authStore.user()?.email?.charAt(0)?.toUpperCase() }}</span>
+            </button>
+            <mat-menu #userMenu="matMenu" class="user-dropdown">
+              <div class="dropdown-header">
+                <span class="dropdown-email">{{ authStore.user()?.email }}</span>
+                <span class="dropdown-org">{{ authStore.organizationId() ? authStore.organizationId()?.slice(0, 8) + '...' : '' }}</span>
+              </div>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="showShortcutsDialog.set(true)">
+                <span class="menu-icon">⌨</span>
+                <span>Shortcuts</span>
+              </button>
+              <mat-divider></mat-divider>
+              <button mat-menu-item (click)="logout()" class="logout-btn">
+                <span class="menu-icon">→</span>
+                <span>Sign out</span>
+              </button>
+            </mat-menu>
           </div>
         </div>
+      </header>
+
+      <!-- Main Content -->
+      <main class="dashboard-main">
+        <!-- Hero Section with Asymmetric Layout -->
+        <section class="hero-section">
+          <div class="hero-content">
+            <div class="hero-text">
+              <span class="hero-eyebrow">Dashboard</span>
+              <h1 class="hero-title">
+                Welcome back<span class="title-accent">.</span>
+              </h1>
+              <p class="hero-subtitle">Your workspace at a glance</p>
+            </div>
+            <div class="hero-action">
+              <a routerLink="/tasks" class="create-task-btn">
+                <span class="btn-icon">+</span>
+                <span class="btn-text">New Task</span>
+              </a>
+            </div>
+          </div>
+        </section>
+
+        <!-- Stats Section - Magazine Layout -->
+        <section class="stats-section">
+          <div class="stats-header">
+            <h2 class="section-title">Overview</h2>
+            <div class="section-line"></div>
+          </div>
+
+          <div class="stats-grid">
+            <!-- Large Feature Stat -->
+            <div class="stat-card stat-featured">
+              <div class="stat-number">{{ tasksStore.completionRate() }}<span class="stat-unit">%</span></div>
+              <div class="stat-label">Completion Rate</div>
+              <div class="stat-progress">
+                <div class="progress-track">
+                  <div class="progress-fill" [style.width.%]="tasksStore.completionRate()"></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Regular Stats -->
+            <div class="stat-card" role="group" aria-label="Total tasks statistic">
+              <div class="stat-icon stat-icon-total" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/>
+                  <path d="M3 9h18M9 21V9"/>
+                </svg>
+              </div>
+              <div class="stat-number">{{ tasksStore.taskCount() }}</div>
+              <div class="stat-label">Total Tasks</div>
+            </div>
+
+            <div class="stat-card" role="group" aria-label="Completed tasks statistic">
+              <div class="stat-icon stat-icon-done" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+                  <path d="M22 4L12 14.01l-3-3"/>
+                </svg>
+              </div>
+              <div class="stat-number">{{ tasksStore.doneTasks().length }}</div>
+              <div class="stat-label">Completed</div>
+            </div>
+
+            <div class="stat-card" role="group" aria-label="In progress tasks statistic">
+              <div class="stat-icon stat-icon-progress" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4M4.93 19.07l2.83-2.83m8.48-8.48l2.83-2.83"/>
+                </svg>
+              </div>
+              <div class="stat-number">{{ tasksStore.inProgressTasks().length }}</div>
+              <div class="stat-label">In Progress</div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Quick Actions + Status Grid -->
+        <section class="content-section">
+          <div class="content-grid">
+            <!-- Quick Actions Card -->
+            <div class="action-card">
+              <div class="card-header">
+                <h3 class="card-title">Quick Actions</h3>
+                <span class="card-badge">Navigate</span>
+              </div>
+              <div class="action-list">
+                <a routerLink="/tasks" class="action-item" matRipple aria-label="Go to Task Board - Kanban view">
+                  <div class="action-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="3" y="3" width="7" height="7"/>
+                      <rect x="14" y="3" width="7" height="7"/>
+                      <rect x="14" y="14" width="7" height="7"/>
+                      <rect x="3" y="14" width="7" height="7"/>
+                    </svg>
+                  </div>
+                  <div class="action-text">
+                    <span class="action-title">Task Board</span>
+                    <span class="action-desc">Kanban view</span>
+                  </div>
+                  <span class="action-arrow" aria-hidden="true">→</span>
+                </a>
+
+                @if (authStore.userRole() === 'admin' || authStore.userRole() === 'owner') {
+                  <a routerLink="/audit" class="action-item" matRipple aria-label="Go to Audit Logs - Activity history">
+                    <div class="action-icon" aria-hidden="true">
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                        <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                      </svg>
+                    </div>
+                    <div class="action-text">
+                      <span class="action-title">Audit Logs</span>
+                      <span class="action-desc">Activity history</span>
+                    </div>
+                    <span class="action-arrow" aria-hidden="true">→</span>
+                  </a>
+                }
+              </div>
+            </div>
+
+            <!-- Status Breakdown -->
+            <div class="status-card">
+              <div class="card-header">
+                <h3 class="card-title">Status Breakdown</h3>
+                <span class="card-badge">Live</span>
+              </div>
+              @if (tasksStore.taskCount() === 0) {
+                <div class="empty-state" role="status">
+                  <div class="empty-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                      <path d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"/>
+                    </svg>
+                  </div>
+                  <span class="empty-title">No tasks yet</span>
+                  <span class="empty-desc">Create your first task to begin</span>
+                </div>
+              } @else {
+                <div class="status-list" role="list" aria-label="Task status breakdown">
+                  @for (stat of statusStats; track stat.status) {
+                    <div class="status-item" role="listitem" [attr.aria-label]="stat.label + ': ' + stat.count() + ' tasks'">
+                      <div class="status-indicator" [style.background]="stat.color" aria-hidden="true"></div>
+                      <span class="status-name">{{ stat.label }}</span>
+                      <span class="status-count">{{ stat.count() }}</span>
+                      <div class="status-bar" role="progressbar" [attr.aria-valuenow]="getStatusPercent(stat.count())" aria-valuemin="0" aria-valuemax="100" [attr.aria-label]="stat.label + ' progress'">
+                        <div class="status-fill" [style.width.%]="getStatusPercent(stat.count())" [style.background]="stat.color"></div>
+                      </div>
+                    </div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+        </section>
+
+        <!-- Footer -->
+        <footer class="dashboard-footer">
+          <div class="keyboard-hint" role="note" aria-label="Keyboard shortcut hint: Press Shift and question mark for shortcuts">
+            <span class="hint-icon" aria-hidden="true">⌨</span>
+            <span>Press</span>
+            <kbd>Shift</kbd>
+            <span>+</span>
+            <kbd>?</kbd>
+            <span>for shortcuts</span>
+          </div>
+        </footer>
       </main>
     </div>
 
-    @if (showShortcutsDialog) {
-      <app-keyboard-shortcuts-dialog (close)="showShortcutsDialog = false" />
+    @if (showShortcutsDialog()) {
+      <app-keyboard-shortcuts-dialog (close)="showShortcutsDialog.set(false)" />
     }
   `,
+  styleUrls: ['./dashboard.component.scss'],
 })
-export class DashboardComponent implements OnInit, OnDestroy {
+export class DashboardComponent implements OnInit {
   protected readonly authStore = inject(AuthStore);
   protected readonly tasksStore = inject(TasksStore);
+  protected readonly themeService = inject(ThemeService);
   private readonly keyboardService = inject(KeyboardShortcutsService);
+  private readonly destroyRef = inject(DestroyRef);
 
-  protected showShortcutsDialog = false;
-  private subscription?: Subscription;
+  protected showShortcutsDialog = signal(false);
 
-  ngOnInit() {
+  protected readonly statusStats = [
+    { status: 'todo', label: 'To Do', count: () => this.tasksStore.todoTasks().length, color: '#a1a1aa' },
+    { status: 'in_progress', label: 'In Progress', count: () => this.tasksStore.inProgressTasks().length, color: '#2563eb' },
+    { status: 'review', label: 'Review', count: () => this.tasksStore.reviewTasks().length, color: '#f97316' },
+    { status: 'done', label: 'Done', count: () => this.tasksStore.doneTasks().length, color: '#059669' },
+  ];
+
+  protected getStatusPercent(count: number): number {
+    const total = this.tasksStore.taskCount();
+    if (total === 0) return 0;
+    return (count / total) * 100;
+  }
+
+  ngOnInit(): void {
     const organizationId = this.authStore.organizationId();
     if (organizationId) {
       this.tasksStore.loadTasks({ organizationId });
     }
 
-    this.subscription = this.keyboardService.shortcutTriggered$.subscribe((action) => {
-      if (action === 'help') {
-        this.showShortcutsDialog = true;
-      }
-    });
+    this.keyboardService.shortcutTriggered$
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe((action) => {
+        if (action === 'help') {
+          this.showShortcutsDialog.set(true);
+        }
+      });
   }
 
-  ngOnDestroy() {
-    this.subscription?.unsubscribe();
-  }
-
-  logout() {
+  logout(): void {
     this.authStore.logout();
   }
 }

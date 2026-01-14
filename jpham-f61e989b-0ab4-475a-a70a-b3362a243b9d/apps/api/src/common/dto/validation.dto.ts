@@ -1,4 +1,4 @@
-import { IsEmail, IsString, MinLength, MaxLength, IsOptional, Matches, IsIn, IsUUID, IsDateString, IsNumber, Min, Max, IsInt, ValidateIf } from 'class-validator';
+import { IsEmail, IsString, MinLength, MaxLength, IsOptional, Matches, IsIn, IsUUID, IsDateString, Min, Max, IsInt, ValidateIf } from 'class-validator';
 import { Type } from 'class-transformer';
 import { TaskStatus, TaskPriority, TaskCategory, UserRole } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
@@ -112,10 +112,15 @@ export class UpdateTaskDtoValidation {
   @IsUUID()
   @IsOptional()
   assigneeId?: string | null;
+
+  @IsInt()
+  @Min(0)
+  @IsOptional()
+  position?: number;
 }
 
 export class ReorderTaskDtoValidation {
-  @IsNumber()
+  @IsInt()
   @Min(0)
   newPosition!: number;
 }

@@ -117,6 +117,7 @@ describe('TasksService', () => {
 
     const mockDataSource = {
       transaction: jest.fn(),
+      options: { type: 'sqlite' }, // Mock database type for supportsPessimisticLocking()
     };
 
     const mockAuditService = {

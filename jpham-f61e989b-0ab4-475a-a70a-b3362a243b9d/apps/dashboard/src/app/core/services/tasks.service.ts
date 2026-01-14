@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
-import { Observable } from 'rxjs';
+import { Observable, map } from 'rxjs';
 import { environment } from '../../../environments/environment';
 import {
   ITask,
@@ -13,6 +13,14 @@ export interface TaskFilters {
   status?: TaskStatus;
   assigneeId?: string;
   createdById?: string;
+}
+
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
 }
 
 @Injectable({ providedIn: 'root' })
@@ -32,9 +40,11 @@ export class TasksService {
       params = params.set('createdById', filters.createdById);
     }
 
-    return this.http.get<ITask[]>(
+    return this.http.get<PaginatedResponse<ITask>>(
       `${this.apiUrl}/organizations/${organizationId}/tasks`,
       { params },
+    ).pipe(
+      map(response => response.data)
     );
   }
 
@@ -65,17 +75,6 @@ export class TasksService {
   deleteTask(organizationId: string, taskId: string): Observable<void> {
     return this.http.delete<void>(
       `${this.apiUrl}/organizations/${organizationId}/tasks/${taskId}`,
-    );
-  }
-
-  reorderTask(
-    organizationId: string,
-    taskId: string,
-    newPosition: number,
-  ): Observable<ITask> {
-    return this.http.put<ITask>(
-      `${this.apiUrl}/organizations/${organizationId}/tasks/${taskId}/reorder`,
-      { newPosition },
     );
   }
 }

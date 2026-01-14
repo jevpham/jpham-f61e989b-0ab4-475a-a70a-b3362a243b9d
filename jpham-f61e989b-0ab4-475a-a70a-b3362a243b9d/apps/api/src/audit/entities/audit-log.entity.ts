@@ -4,12 +4,16 @@ import {
   Column,
   CreateDateColumn,
   Index,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { AuditAction } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+import { User } from '../../users/entities/user.entity';
 
 @Entity('audit_logs')
 @Index(['userId'])
 @Index(['organizationId'])
+@Index(['organizationId', 'createdAt'])
 @Index(['resource', 'resourceId'])
 @Index(['createdAt'])
 export class AuditLog {
@@ -27,6 +31,10 @@ export class AuditLog {
 
   @Column({ type: 'varchar', nullable: true })
   userId!: string | null;
+
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'userId' })
+  user!: User | null;
 
   @Column({ type: 'varchar', nullable: true })
   organizationId!: string | null;

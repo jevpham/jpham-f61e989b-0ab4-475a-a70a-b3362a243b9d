@@ -1,0 +1,178 @@
+<div class="auth-container">
+  <!-- Decorative Background -->
+  <div class="auth-background">
+    <div class="bg-pattern"></div>
+    <div class="bg-gradient"></div>
+  </div>
+
+  <!-- Left Panel - Branding -->
+  <div class="brand-panel">
+    <div class="brand-content">
+      <!-- Logo -->
+      <div class="logo">
+        <div class="logo-mark">
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M10 16L14 20L22 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="logo-text">TaskFlow</span>
+      </div>
+
+      <!-- Hero Text -->
+      <div class="hero-content">
+        <h1 class="hero-title">
+          Organize your work,<br>
+          <span class="hero-accent">amplify your focus.</span>
+        </h1>
+        <p class="hero-desc">
+          A beautifully crafted task management experience designed for teams who value simplicity and efficiency.
+        </p>
+      </div>
+
+      <!-- Features -->
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <rect x="3" y="3" width="7" height="7"/>
+              <rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/>
+              <rect x="3" y="14" width="7" height="7"/>
+            </svg>
+          </span>
+          <span class="feature-text">Kanban boards</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </span>
+          <span class="feature-text">Team collaboration</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M12 2v4m0 12v4M4.93 4.93l2.83 2.83m8.48 8.48l2.83 2.83M2 12h4m12 0h4"/>
+            </svg>
+          </span>
+          <span class="feature-text">Real-time sync</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decorative line -->
+    <div class="brand-line"></div>
+  </div>
+
+  <!-- Right Panel - Form -->
+  <div class="form-panel">
+    <div class="form-container">
+      <!-- Mobile Logo -->
+      <div class="mobile-logo">
+        <div class="logo-mark">
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M10 16L14 20L22 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="logo-text">TaskFlow</span>
+      </div>
+
+      <!-- Form Header -->
+      <div class="form-header">
+        <span class="form-eyebrow">Welcome back</span>
+        <h2 class="form-title">Sign in to your account</h2>
+        <p class="form-desc">Enter your credentials to continue</p>
+      </div>
+
+      <!-- Error Message -->
+      @if (authStore.error()) {
+        <div class="error-banner" role="alert" aria-live="assertive">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4m0 4h.01"/>
+          </svg>
+          <span>{{ authStore.error() }}</span>
+        </div>
+      }
+
+      <!-- Form -->
+      <form [formGroup]="loginForm" (ngSubmit)="onSubmit()" class="auth-form">
+        <div class="form-group">
+          <label for="email" class="form-label">Email address</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            class="form-input"
+            [class.input-error]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+            [attr.aria-invalid]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched"
+            [attr.aria-describedby]="loginForm.get('email')?.invalid && loginForm.get('email')?.touched ? 'email-error' : null"
+            autocomplete="email"
+            placeholder="you@example.com"
+          />
+          @if (loginForm.get('email')?.invalid && loginForm.get('email')?.touched) {
+            <span id="email-error" class="field-error" aria-live="polite">
+              @if (loginForm.get('email')?.hasError('required')) {
+                Email is required
+              } @else if (loginForm.get('email')?.hasError('email')) {
+                Please enter a valid email
+              }
+            </span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            class="form-input"
+            [class.input-error]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+            [attr.aria-invalid]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched"
+            [attr.aria-describedby]="loginForm.get('password')?.invalid && loginForm.get('password')?.touched ? 'password-error' : null"
+            autocomplete="current-password"
+            placeholder="Enter your password"
+          />
+          @if (loginForm.get('password')?.invalid && loginForm.get('password')?.touched) {
+            <span id="password-error" class="field-error" aria-live="polite">
+              @if (loginForm.get('password')?.hasError('required')) {
+                Password is required
+              } @else if (loginForm.get('password')?.hasError('minlength')) {
+                Password must be at least 8 characters
+              }
+            </span>
+          }
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="loginForm.invalid || authStore.isLoading()"
+          class="submit-btn"
+        >
+          @if (authStore.isLoading()) {
+            <svg class="spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+              <path class="spinner-head" d="M12 2a10 10 0 0110 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <span>Signing in...</span>
+          } @else {
+            <span>Sign in</span>
+            <span class="btn-arrow" aria-hidden="true">-></span>
+          }
+        </button>
+      </form>
+
+      <!-- Footer -->
+      <div class="form-footer">
+        <span>Don't have an account?</span>
+        <a routerLink="/register" class="register-link">Create one now</a>
+      </div>
+    </div>
+  </div>
+</div>

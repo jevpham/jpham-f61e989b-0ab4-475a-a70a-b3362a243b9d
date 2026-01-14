@@ -4,18 +4,19 @@ import {
   Param,
   Query,
   ForbiddenException,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
   ApiResponse,
   ApiParam,
-  ApiQuery,
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { AuditService, AuditLogFilters } from './audit.service';
+import { AuditLogQueryDto, AuditLogUserQueryDto } from './dto/audit-log-query.dto';
 import { CurrentUser, Roles } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/auth';
-import { IUser, IAuditLog, AuditAction } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+import { IUser, IAuditLog } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 import { OrganizationsService } from '../organizations/organizations.service';
 
 @ApiTags('audit')
@@ -27,31 +28,64 @@ export class AuditController {
     private readonly organizationsService: OrganizationsService,
   ) {}
 
+  @Get()
+  @Roles('owner', 'admin')
+  @ApiOperation({ summary: 'Get audit logs', description: 'Get audit logs for the current organization (Admin+ only)' })
+  @ApiResponse({ status: 200, description: 'Returns paginated audit logs' })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
+  @ApiResponse({ status: 403, description: 'Access denied - Admin role required' })
+  async findAll(
+    @CurrentUser() user: IUser,
+    @Query() query: AuditLogQueryDto,
+  ): Promise<{ data: IAuditLog[]; total: number; page: number; limit: number }> {
+    const targetOrganizationId = query.organizationId ?? user.organizationId;
+
+    if (!targetOrganizationId) {
+      throw new ForbiddenException('Organization ID is required');
+    }
+
+    const hasPermission = await this.organizationsService.hasPermission(
+      user.id,
+      targetOrganizationId,
+      'admin',
+    );
+
+    if (!hasPermission) {
+      throw new ForbiddenException('Access denied');
+    }
+
+    const filters: Omit<AuditLogFilters, 'organizationId'> = {};
+    if (query.userId) filters.userId = query.userId;
+    if (query.action) filters.action = query.action;
+    if (query.resource) filters.resource = query.resource;
+    if (query.startDate) filters.startDate = new Date(query.startDate);
+    if (query.endDate) filters.endDate = new Date(query.endDate);
+
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 50;
+
+    const result = await this.auditService.findByOrganization(
+      targetOrganizationId,
+      filters,
+      page,
+      limit,
+    );
+
+    return { ...result, page, limit };
+  }
+
   @Get('organization/:orgId')
   @Roles('owner', 'admin')
   @ApiOperation({ summary: 'Get organization audit logs', description: 'Get audit logs for an organization (Admin+ only)' })
   @ApiParam({ name: 'orgId', description: 'Organization ID' })
-  @ApiQuery({ name: 'userId', required: false, description: 'Filter by user ID' })
-  @ApiQuery({ name: 'action', required: false, enum: ['create', 'update', 'delete', 'login', 'logout', 'status_change', 'role_change', 'reorder'] })
-  @ApiQuery({ name: 'resource', required: false, description: 'Filter by resource type (task, organization, user)' })
-  @ApiQuery({ name: 'startDate', required: false, description: 'Filter from date (ISO 8601)' })
-  @ApiQuery({ name: 'endDate', required: false, description: 'Filter to date (ISO 8601)' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 50, max: 100)' })
   @ApiResponse({ status: 200, description: 'Returns paginated audit logs' })
+  @ApiResponse({ status: 400, description: 'Invalid organization ID or query parameters' })
   @ApiResponse({ status: 403, description: 'Access denied - Admin role required' })
   async findByOrganization(
-    @Param('orgId') orgId: string,
+    @Param('orgId', ParseUUIDPipe) orgId: string,
     @CurrentUser() user: IUser,
-    @Query('userId') userId?: string,
-    @Query('action') action?: AuditAction,
-    @Query('resource') resource?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('page') page = '1',
-    @Query('limit') limit = '50',
+    @Query() query: AuditLogUserQueryDto,
   ): Promise<{ data: IAuditLog[]; total: number }> {
-    // Verify user has admin access to organization
     const hasPermission = await this.organizationsService.hasPermission(
       user.id,
       orgId,
@@ -63,17 +97,16 @@ export class AuditController {
     }
 
     const filters: Omit<AuditLogFilters, 'organizationId'> = {};
-    if (userId) filters.userId = userId;
-    if (action) filters.action = action;
-    if (resource) filters.resource = resource;
-    if (startDate) filters.startDate = new Date(startDate);
-    if (endDate) filters.endDate = new Date(endDate);
+    if (query.action) filters.action = query.action;
+    if (query.resource) filters.resource = query.resource;
+    if (query.startDate) filters.startDate = new Date(query.startDate);
+    if (query.endDate) filters.endDate = new Date(query.endDate);
 
     return this.auditService.findByOrganization(
       orgId,
       filters,
-      parseInt(page, 10),
-      Math.min(parseInt(limit, 10), 100), // Cap at 100
+      query.page ?? 1,
+      query.limit ?? 50,
     );
   }
 
@@ -81,87 +114,76 @@ export class AuditController {
   @Roles('owner', 'admin')
   @ApiOperation({ summary: 'Get user audit logs', description: 'Get audit logs for a specific user (Admin+ only, or own logs)' })
   @ApiParam({ name: 'userId', description: 'User ID to get logs for' })
-  @ApiQuery({ name: 'organizationId', required: false, description: 'Filter by organization ID' })
-  @ApiQuery({ name: 'action', required: false, enum: ['create', 'update', 'delete', 'login', 'logout', 'status_change', 'role_change', 'reorder'] })
-  @ApiQuery({ name: 'resource', required: false, description: 'Filter by resource type' })
-  @ApiQuery({ name: 'startDate', required: false, description: 'Filter from date (ISO 8601)' })
-  @ApiQuery({ name: 'endDate', required: false, description: 'Filter to date (ISO 8601)' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 50, max: 100)' })
   @ApiResponse({ status: 200, description: 'Returns paginated audit logs' })
+  @ApiResponse({ status: 400, description: 'Invalid user ID or query parameters' })
   @ApiResponse({ status: 403, description: 'Access denied' })
   async findByUser(
-    @Param('userId') userId: string,
+    @Param('userId', ParseUUIDPipe) userId: string,
     @CurrentUser() user: IUser,
-    @Query('organizationId') organizationId?: string,
-    @Query('action') action?: AuditAction,
-    @Query('resource') resource?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('page') page = '1',
-    @Query('limit') limit = '50',
+    @Query() query: AuditLogUserQueryDto,
   ): Promise<{ data: IAuditLog[]; total: number }> {
     // Users can only view their own logs, or admins can view any user in their org
     if (userId !== user.id) {
       // Check if requesting user is admin of an org that target user belongs to
-      if (organizationId) {
+      if (query.organizationId) {
         const hasPermission = await this.organizationsService.hasPermission(
           user.id,
-          organizationId,
+          query.organizationId,
           'admin',
         );
         if (!hasPermission) {
           throw new ForbiddenException('Access denied');
         }
+        const targetUserBelongsToOrg =
+          await this.organizationsService.isUserInOrganization(
+            userId,
+            query.organizationId,
+          );
+        if (!targetUserBelongsToOrg) {
+          throw new ForbiddenException(
+            'User does not belong to the specified organization',
+          );
+        }
       } else {
-        throw new ForbiddenException('Access denied');
+        // Must specify organizationId when querying other users' logs
+        throw new ForbiddenException('organizationId is required when viewing other users\' logs');
       }
     }
 
     const filters: Omit<AuditLogFilters, 'userId'> = {};
-    if (organizationId) filters.organizationId = organizationId;
-    if (action) filters.action = action;
-    if (resource) filters.resource = resource;
-    if (startDate) filters.startDate = new Date(startDate);
-    if (endDate) filters.endDate = new Date(endDate);
+    if (query.organizationId) filters.organizationId = query.organizationId;
+    if (query.action) filters.action = query.action;
+    if (query.resource) filters.resource = query.resource;
+    if (query.startDate) filters.startDate = new Date(query.startDate);
+    if (query.endDate) filters.endDate = new Date(query.endDate);
 
     return this.auditService.findByUser(
       userId,
       filters,
-      parseInt(page, 10),
-      Math.min(parseInt(limit, 10), 100),
+      query.page ?? 1,
+      query.limit ?? 50,
     );
   }
 
   @Get('me')
   @ApiOperation({ summary: 'Get my audit logs', description: 'Get audit logs for the current authenticated user' })
-  @ApiQuery({ name: 'action', required: false, enum: ['create', 'update', 'delete', 'login', 'logout', 'status_change', 'role_change', 'reorder'] })
-  @ApiQuery({ name: 'resource', required: false, description: 'Filter by resource type' })
-  @ApiQuery({ name: 'startDate', required: false, description: 'Filter from date (ISO 8601)' })
-  @ApiQuery({ name: 'endDate', required: false, description: 'Filter to date (ISO 8601)' })
-  @ApiQuery({ name: 'page', required: false, description: 'Page number (default: 1)' })
-  @ApiQuery({ name: 'limit', required: false, description: 'Items per page (default: 50, max: 100)' })
   @ApiResponse({ status: 200, description: 'Returns paginated audit logs' })
+  @ApiResponse({ status: 400, description: 'Invalid query parameters' })
   async findMyLogs(
     @CurrentUser() user: IUser,
-    @Query('action') action?: AuditAction,
-    @Query('resource') resource?: string,
-    @Query('startDate') startDate?: string,
-    @Query('endDate') endDate?: string,
-    @Query('page') page = '1',
-    @Query('limit') limit = '50',
+    @Query() query: AuditLogUserQueryDto,
   ): Promise<{ data: IAuditLog[]; total: number }> {
     const filters: Omit<AuditLogFilters, 'userId'> = {};
-    if (action) filters.action = action;
-    if (resource) filters.resource = resource;
-    if (startDate) filters.startDate = new Date(startDate);
-    if (endDate) filters.endDate = new Date(endDate);
+    if (query.action) filters.action = query.action;
+    if (query.resource) filters.resource = query.resource;
+    if (query.startDate) filters.startDate = new Date(query.startDate);
+    if (query.endDate) filters.endDate = new Date(query.endDate);
 
     return this.auditService.findByUser(
       user.id,
       filters,
-      parseInt(page, 10),
-      Math.min(parseInt(limit, 10), 100),
+      query.page ?? 1,
+      query.limit ?? 50,
     );
   }
 }

@@ -1,0 +1,366 @@
+/* ===========================================
+   TASK BOARD COMPONENT STYLES
+   Using CSS variables from design system
+   =========================================== */
+
+/* Base Container - Full viewport coverage */
+.task-board-container {
+  min-height: 100vh;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-primary-50);
+  position: relative;
+  overflow: hidden;
+  --board-gutter: var(--space-2xl);
+  --board-header-padding: var(--space-lg);
+  --board-control-size: 40px;
+  --board-create-padding: 0.75rem 1.5rem;
+  --board-badge-padding: 0.375rem 0.875rem;
+  --board-max-width: 1600px;
+  --board-header-min-height: 72px;
+
+  :host-context(.dark) & {
+    background: var(--color-primary-950);
+  }
+}
+
+/* Header content layout */
+.board-header .header-content {
+  max-width: var(--board-max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--board-header-padding) var(--board-gutter);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-xl);
+  min-height: var(--board-header-min-height);
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+}
+
+.back-btn {
+  width: var(--board-control-size);
+  height: var(--board-control-size);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-100);
+  border-radius: var(--radius-md);
+  color: var(--color-primary-500);
+  text-decoration: none;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: #fef3c7;
+    color: #d97706;
+  }
+
+  :host-context(.dark) & {
+    background: var(--color-primary-800);
+    color: var(--color-primary-400);
+
+    &:hover {
+      background: rgba(217, 119, 6, 0.2);
+      color: #fbbf24;
+    }
+  }
+}
+
+.header-text {
+  display: flex;
+  flex-direction: column;
+}
+
+.board-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-primary-900);
+  letter-spacing: -0.02em;
+  margin: 0;
+  line-height: 1.2;
+
+  :host-context(.dark) & {
+    color: var(--color-primary-50);
+  }
+}
+
+.board-subtitle {
+  font-family: var(--font-body);
+  font-size: 0.8125rem;
+  color: var(--color-primary-500);
+  margin: 0.125rem 0 0;
+}
+
+.create-btn {
+  gap: var(--space-sm);
+  padding: var(--board-create-padding);
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-lg);
+  flex: 0 0 auto;
+}
+
+/* Role Badge */
+.role-badge {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  padding: var(--board-badge-padding);
+  background: var(--color-primary-100);
+  border: 1px solid var(--color-primary-200);
+  border-radius: var(--radius-full, 9999px);
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-primary-600);
+
+  :host-context(.dark) & {
+    background: var(--color-primary-800);
+    border-color: var(--color-primary-700);
+    color: var(--color-primary-300);
+  }
+}
+
+/* Error Banner */
+.error-banner {
+  margin: var(--space-lg) var(--board-gutter);
+  padding: var(--space-lg);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-lg);
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  color: #dc2626;
+
+  :host-context(.dark) & {
+    background: rgba(220, 38, 38, 0.1);
+    border-color: rgba(220, 38, 38, 0.3);
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.875rem;
+  }
+}
+
+/* Main Board Area - Fills remaining space */
+.board-main {
+  flex: 1;
+  position: relative;
+  z-index: var(--z-content);
+  max-width: var(--board-max-width);
+  width: 100%;
+  margin: 0 auto;
+  padding: var(--board-gutter) var(--board-gutter) var(--space-2xl);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Loading State - uses global spinner */
+.loading-state {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-lg);
+
+  p {
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    color: var(--color-primary-500);
+    margin: 0;
+  }
+}
+
+/* Columns Grid - Full width, fills height */
+.columns-grid {
+  flex: 1;
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: var(--space-xl);
+  margin-top: var(--space-lg);
+  min-height: 0;
+
+  @media (max-width: 1280px) {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  @media (max-width: 768px) {
+    grid-template-columns: 1fr;
+    margin-top: var(--space-md);
+  }
+}
+
+@media (max-width: 768px) {
+  .task-board-container {
+    --board-gutter: var(--space-lg);
+    --board-header-padding: var(--space-md);
+    --board-control-size: 40px;
+    --board-create-padding: 0.75rem 1.5rem;
+    --board-badge-padding: 0.375rem 0.75rem;
+    --board-header-min-height: 64px;
+  }
+
+  /* On mobile, let the main container scroll instead of individual columns */
+  .board-main {
+    overflow-y: auto;
+    padding: var(--board-gutter);
+  }
+
+  .board-header .header-content {
+    padding: var(--space-md) var(--board-gutter);
+  }
+}
+
+/* Kanban Column - extends global kanban-column */
+.kanban-column {
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-xl);
+  padding: var(--space-lg);
+  min-height: 0;
+}
+
+/* Column Header */
+.column-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: var(--space-md);
+  margin-bottom: var(--space-md);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+
+  :host-context(.dark) & {
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+}
+
+.column-title-group {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.column-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1rem;
+}
+
+.column-title {
+  font-size: 0.9375rem;
+  font-weight: 500;
+  color: var(--color-primary-900);
+  margin: 0;
+
+  :host-context(.dark) & {
+    color: var(--color-primary-50);
+  }
+}
+
+.column-count {
+  min-width: 24px;
+  height: 24px;
+  padding: 0 var(--space-sm);
+}
+
+/* Drop Zone - Scrollable area for tasks */
+.drop-zone {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-sm);
+  min-height: 80px;
+  overflow-y: auto;
+  padding-right: var(--space-xs);
+
+  /* Custom scrollbar */
+  &::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: var(--color-primary-300);
+    border-radius: 2px;
+  }
+
+  :host-context(.dark) &::-webkit-scrollbar-thumb {
+    background: var(--color-primary-700);
+  }
+}
+
+/* Task Card Wrapper */
+.task-card-wrapper {
+  /* Inherits animation from global animate-fade-in-up */
+  position: relative;
+
+  /* Hide original card while dragging - the placeholder takes its place */
+  &.cdk-drag-dragging > app-task-card {
+    opacity: 0;
+  }
+}
+
+/* Status-specific accent colors for column icons */
+.status-todo { background: var(--status-todo-bg); }
+.status-progress { background: var(--status-progress-bg); }
+.status-review { background: var(--status-review-bg); }
+.status-done { background: var(--status-done-bg); }
+
+:host-context(.dark) {
+  .status-todo { background: rgba(100, 116, 139, 0.3); }
+  .status-progress { background: rgba(30, 64, 175, 0.4); }
+  .status-review { background: rgba(180, 83, 9, 0.4); }
+  .status-done { background: rgba(6, 95, 70, 0.4); }
+}
+
+/* Legacy accent color support (from column config) */
+.bg-slate-100 { background: var(--status-todo-bg); }
+.bg-blue-100 { background: var(--status-progress-bg); }
+.bg-amber-100 { background: var(--status-review-bg); }
+.bg-emerald-100 { background: var(--status-done-bg); }
+
+:host-context(.dark) {
+  .bg-slate-100,
+  .dark\:bg-slate-800 { background: rgba(100, 116, 139, 0.3); }
+  .bg-blue-100,
+  .dark\:bg-blue-900\/40 { background: rgba(30, 64, 175, 0.4); }
+  .bg-amber-100,
+  .dark\:bg-amber-900\/40 { background: rgba(180, 83, 9, 0.4); }
+  .bg-emerald-100,
+  .dark\:bg-emerald-900\/40 { background: rgba(6, 95, 70, 0.4); }
+}
+
+/* Badge colors for column counts */
+.bg-slate-200 { background: #e2e8f0; color: var(--status-todo-text); }
+.bg-blue-100.text-blue-700 { background: var(--status-progress-bg); color: var(--status-progress-text); }
+.bg-amber-100.text-amber-700 { background: var(--status-review-bg); color: var(--status-review-text); }
+.bg-emerald-100.text-emerald-700 { background: var(--status-done-bg); color: var(--status-done-text); }
+
+:host-context(.dark) {
+  .bg-slate-200,
+  .dark\:bg-slate-700 { background: #334155; color: #cbd5e1; }
+  .bg-blue-100.text-blue-700,
+  .dark\:bg-blue-900\/60 { background: rgba(30, 64, 175, 0.6); color: #93c5fd; }
+  .bg-amber-100.text-amber-700,
+  .dark\:bg-amber-900\/60 { background: rgba(180, 83, 9, 0.6); color: #fcd34d; }
+  .bg-emerald-100.text-emerald-700,
+  .dark\:bg-emerald-900\/60 { background: rgba(6, 95, 70, 0.6); color: #6ee7b7; }
+}

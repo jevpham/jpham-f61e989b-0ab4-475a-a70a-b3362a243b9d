@@ -1,4 +1,4 @@
-import { Component, Input, Output, EventEmitter, OnInit, inject } from '@angular/core';
+import { Component, Input, Output, EventEmitter, OnInit, inject, ChangeDetectionStrategy, ElementRef, ViewChild, AfterViewInit, HostListener } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import {
@@ -14,106 +14,123 @@ import {
   selector: 'app-task-form',
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
+  changeDetection: ChangeDetectionStrategy.OnPush,
+  styleUrls: ['./task-form.component.scss'],
   template: `
     <div
-      class="fixed inset-0 modal-backdrop flex items-center justify-center z-50 animate-fade-in"
+      class="task-form-overlay"
       (click)="onCancel()"
+      role="presentation"
     >
       <div
-        class="bg-white dark:bg-slate-800 rounded-2xl shadow-elevated max-w-lg w-full mx-4 max-h-[90vh] overflow-y-auto border border-slate-200/60 dark:border-slate-700/40 animate-scale-in"
+        class="task-form-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="task-form-title"
+        aria-describedby="task-form-subtitle"
         (click)="$event.stopPropagation()"
+        #modalElement
       >
         <!-- Header -->
-        <div class="px-6 py-5 border-b border-slate-100 dark:border-slate-700/40">
-          <div class="flex items-center gap-3">
-            <div class="w-10 h-10 rounded-xl bg-linear-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-md shadow-amber-500/20">
-              @if (task) {
-                <svg class="w-5 h-5 text-white" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                </svg>
-              } @else {
-                <svg class="w-5 h-5 text-white" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                </svg>
-              }
-            </div>
-            <div>
-              <h3 class="font-display text-lg font-semibold text-slate-900 dark:text-white">
-                {{ task ? 'Edit Task' : 'Create New Task' }}
-              </h3>
-              <p class="text-sm text-slate-500 dark:text-slate-400">
-                {{ task ? 'Update task details below' : 'Fill in the details for your new task' }}
-              </p>
-            </div>
+        <div class="task-form-header">
+          <div class="header-icon" aria-hidden="true">
+            @if (task) {
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+              </svg>
+            } @else {
+              <svg width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+              </svg>
+            }
+          </div>
+          <div class="header-text">
+            <h3 id="task-form-title" class="header-title">
+              {{ task ? 'Edit Task' : 'Create New Task' }}
+            </h3>
+            <p id="task-form-subtitle" class="header-subtitle">
+              {{ task ? 'Update task details below' : 'Fill in the details for your new task' }}
+            </p>
           </div>
         </div>
 
-        <form [formGroup]="taskForm" (ngSubmit)="onSubmit()" class="p-6 space-y-5">
+        <form [formGroup]="taskForm" (ngSubmit)="onSubmit()" class="task-form-body">
           <!-- Title -->
-          <div>
-            <label for="title" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
-              Title <span class="text-red-500">*</span>
+          <div class="form-group">
+            <label for="title" class="form-label">
+              Title <span class="required-mark" aria-hidden="true">*</span>
+              <span class="sr-only">(required)</span>
             </label>
             <input
+              #titleInput
               id="title"
               type="text"
               formControlName="title"
-              class="input-field"
+              class="form-input"
+              [class.form-input--error]="taskForm.get('title')?.invalid && taskForm.get('title')?.touched"
               placeholder="What needs to be done?"
+              aria-required="true"
+              [attr.aria-invalid]="taskForm.get('title')?.invalid && taskForm.get('title')?.touched"
+              [attr.aria-describedby]="taskForm.get('title')?.invalid && taskForm.get('title')?.touched ? 'title-error' : null"
             />
+            @if (taskForm.get('title')?.invalid && taskForm.get('title')?.touched) {
+              <span id="title-error" class="form-error" role="alert">
+                Title is required
+              </span>
+            }
           </div>
 
           <!-- Description -->
-          <div>
-            <label for="description" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <div class="form-group">
+            <label for="description" class="form-label">
               Description
             </label>
             <textarea
               id="description"
               formControlName="description"
               rows="3"
-              class="input-field resize-none"
+              class="form-input form-textarea"
               placeholder="Add more details about this task..."
             ></textarea>
           </div>
 
           <!-- Priority & Category -->
-          <div class="grid grid-cols-2 gap-4">
-            <div>
-              <label for="priority" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="priority" class="form-label">
                 Priority
               </label>
-              <div class="relative">
+              <div class="select-wrapper">
                 <select
                   id="priority"
                   formControlName="priority"
-                  class="input-field appearance-none pr-10"
+                  class="form-input form-select"
                 >
                   @for (priority of priorities; track priority) {
                     <option [value]="priority">{{ priority | titlecase }}</option>
                   }
                 </select>
-                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg class="select-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
             </div>
 
-            <div>
-              <label for="category" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <div class="form-group">
+              <label for="category" class="form-label">
                 Category
               </label>
-              <div class="relative">
+              <div class="select-wrapper">
                 <select
                   id="category"
                   formControlName="category"
-                  class="input-field appearance-none pr-10"
+                  class="form-input form-select"
                 >
                   @for (category of categories; track category.value) {
                     <option [value]="category.value">{{ category.label }}</option>
                   }
                 </select>
-                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg class="select-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
@@ -122,21 +139,21 @@ import {
 
           <!-- Status (only for edit) -->
           @if (task) {
-            <div>
-              <label for="status" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+            <div class="form-group">
+              <label for="status" class="form-label">
                 Status
               </label>
-              <div class="relative">
+              <div class="select-wrapper">
                 <select
                   id="status"
                   formControlName="status"
-                  class="input-field appearance-none pr-10"
+                  class="form-input form-select"
                 >
                   @for (status of statuses; track status.value) {
                     <option [value]="status.value">{{ status.label }}</option>
                   }
                 </select>
-                <svg class="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <svg class="select-chevron" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                   <path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7" />
                 </svg>
               </div>
@@ -144,54 +161,55 @@ import {
           }
 
           <!-- Due Date -->
-          <div>
-            <label for="dueDate" class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">
+          <div class="form-group">
+            <label for="dueDate" class="form-label">
               Due Date
             </label>
             <input
               id="dueDate"
               type="date"
               formControlName="dueDate"
-              class="input-field"
+              class="form-input"
             />
           </div>
 
           <!-- Actions -->
-          <div class="flex justify-between items-center pt-5 border-t border-slate-100 dark:border-slate-700/40">
-            <div>
-              @if (task) {
+          <div class="form-actions">
+            <div class="actions-left">
+              @if (task && canDelete) {
                 <button
                   type="button"
                   (click)="onDelete()"
-                  class="btn-danger"
+                  class="btn-delete"
                 >
-                  <svg class="w-4 h-4 mr-1.5" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
                   Delete
                 </button>
               }
             </div>
-            <div class="flex gap-3">
+            <div class="actions-right">
               <button
                 type="button"
                 (click)="onCancel()"
-                class="btn-secondary"
+                class="btn-cancel"
               >
                 Cancel
               </button>
               <button
                 type="submit"
                 [disabled]="taskForm.invalid"
-                class="btn-primary"
+                [attr.aria-disabled]="taskForm.invalid"
+                class="btn-submit"
               >
                 @if (task) {
-                  <svg class="w-4 h-4 mr-1.5" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
                   </svg>
                   Save Changes
                 } @else {
-                  <svg class="w-4 h-4 mr-1.5" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true" focusable="false">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
                   </svg>
                   Create Task
@@ -204,13 +222,44 @@ import {
     </div>
   `,
 })
-export class TaskFormComponent implements OnInit {
+export class TaskFormComponent implements OnInit, AfterViewInit {
   @Input() task: ITask | null = null;
+  @Input() canDelete = true; // RBAC: Controls delete button visibility
   @Output() save = new EventEmitter<CreateTaskDto | UpdateTaskDto>();
   @Output() delete = new EventEmitter<void>();
   @Output() cancel = new EventEmitter<void>();
 
+  @ViewChild('titleInput') titleInput!: ElementRef<HTMLInputElement>;
+  @ViewChild('modalElement') modalElement!: ElementRef<HTMLDivElement>;
+
   private readonly fb = inject(FormBuilder);
+
+  /** Handle Escape key to close modal */
+  @HostListener('document:keydown.escape')
+  onEscapeKey(): void {
+    this.onCancel();
+  }
+
+  /** Trap focus within modal for accessibility */
+  @HostListener('document:keydown', ['$event'])
+  onTabKey(event: KeyboardEvent): void {
+    if (event.key !== 'Tab') return;
+    if (!this.modalElement?.nativeElement) return;
+
+    const focusableElements = this.modalElement.nativeElement.querySelectorAll<HTMLElement>(
+      'input, select, textarea, button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    if (event.shiftKey && document.activeElement === firstElement) {
+      event.preventDefault();
+      lastElement?.focus();
+    } else if (!event.shiftKey && document.activeElement === lastElement) {
+      event.preventDefault();
+      firstElement?.focus();
+    }
+  }
 
   protected priorities: TaskPriority[] = ['low', 'medium', 'high', 'urgent'];
   protected categories: { value: TaskCategory; label: string }[] = [
@@ -251,6 +300,13 @@ export class TaskFormComponent implements OnInit {
     }
   }
 
+  ngAfterViewInit() {
+    // Focus the title input when modal opens for accessibility
+    setTimeout(() => {
+      this.titleInput?.nativeElement?.focus();
+    }, 100);
+  }
+
   onSubmit() {
     if (this.taskForm.valid) {
       const formValue = this.taskForm.value;
@@ -279,6 +335,12 @@ export class TaskFormComponent implements OnInit {
   }
 
   onDelete() {
+    // Defense in depth: verify permission before emitting
+    if (!this.canDelete) {
+      console.warn('Delete action blocked: insufficient permissions');
+      return;
+    }
+
     if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
       this.delete.emit();
     }

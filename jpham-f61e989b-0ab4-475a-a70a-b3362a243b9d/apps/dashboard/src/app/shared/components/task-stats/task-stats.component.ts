@@ -1,10 +1,14 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { TasksStore } from '../../../store/tasks/tasks.store';
+
+// Generate unique ID for SVG gradients to avoid collisions across component instances
+let gradientIdCounter = 0;
 
 @Component({
   selector: 'app-task-stats',
   standalone: true,
+  changeDetection: ChangeDetectionStrategy.OnPush,
   imports: [CommonModule],
   template: `
     <div class="bg-white dark:bg-slate-800/80 rounded-2xl shadow-soft border border-slate-200/60 dark:border-slate-700/40 overflow-hidden">
@@ -31,45 +35,69 @@ import { TasksStore } from '../../../store/tasks/tasks.store';
         <!-- Completion Rate Circle -->
         <div class="flex items-center justify-center mb-6">
           <div class="relative w-32 h-32">
-            <!-- Background circle -->
-            <svg class="w-full h-full transform -rotate-90">
-              <circle
-                cx="64"
-                cy="64"
-                r="56"
-                stroke="currentColor"
-                stroke-width="12"
-                fill="none"
-                class="text-slate-100 dark:text-slate-700"
-              />
-              <circle
-                cx="64"
-                cy="64"
-                r="56"
-                stroke="url(#progressGradient)"
-                stroke-width="12"
-                fill="none"
-                stroke-linecap="round"
-                class="progress-bar"
-                [style.stroke-dasharray]="circumference"
-                [style.stroke-dashoffset]="strokeDashoffset()"
-              />
-              <defs>
-                <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                  <stop offset="0%" stop-color="#34d399" />
-                  <stop offset="100%" stop-color="#10b981" />
-                </linearGradient>
-              </defs>
-            </svg>
-            <!-- Center text -->
-            <div class="absolute inset-0 flex flex-col items-center justify-center">
-              <span class="font-display text-3xl font-bold text-slate-900 dark:text-white">
-                {{ tasksStore.completionRate() }}%
-              </span>
-              <span class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                Complete
-              </span>
-            </div>
+            @if (tasksStore.taskCount() === 0) {
+              <!-- Empty state - no tasks -->
+              <svg class="w-full h-full">
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="56"
+                  stroke="currentColor"
+                  stroke-width="12"
+                  fill="none"
+                  class="text-slate-100 dark:text-slate-700"
+                  stroke-dasharray="8 4"
+                />
+              </svg>
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <svg class="w-8 h-8 text-slate-300 dark:text-slate-600 mb-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                </svg>
+                <span class="text-xs text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+                  No tasks
+                </span>
+              </div>
+            } @else {
+              <!-- Progress ring -->
+              <svg class="w-full h-full transform -rotate-90">
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="56"
+                  stroke="currentColor"
+                  stroke-width="12"
+                  fill="none"
+                  class="text-slate-100 dark:text-slate-700"
+                />
+                <circle
+                  cx="64"
+                  cy="64"
+                  r="56"
+                  [attr.stroke]="'url(#' + gradientId + ')'"
+                  stroke-width="12"
+                  fill="none"
+                  stroke-linecap="round"
+                  class="transition-all duration-500 ease-out"
+                  [style.stroke-dasharray]="circumference"
+                  [style.stroke-dashoffset]="strokeDashoffset()"
+                />
+                <defs>
+                  <linearGradient [attr.id]="gradientId" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="#34d399" />
+                    <stop offset="100%" stop-color="#10b981" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <!-- Center text -->
+              <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span class="font-display text-3xl font-bold text-slate-900 dark:text-white">
+                  {{ tasksStore.completionRate() }}%
+                </span>
+                <span class="text-xs text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                  Complete
+                </span>
+              </div>
+            }
           </div>
         </div>
 
@@ -119,6 +147,9 @@ import { TasksStore } from '../../../store/tasks/tasks.store';
 })
 export class TaskStatsComponent {
   protected readonly tasksStore = inject(TasksStore);
+
+  // Unique gradient ID for this component instance to avoid SVG ID collisions
+  protected readonly gradientId = `progressGradient-${++gradientIdCounter}`;
 
   protected readonly circumference = 2 * Math.PI * 56;
 

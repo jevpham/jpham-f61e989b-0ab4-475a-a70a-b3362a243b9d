@@ -1,0 +1,248 @@
+<div class="auth-container">
+  <!-- Decorative Background -->
+  <div class="auth-background">
+    <div class="bg-pattern"></div>
+    <div class="bg-gradient"></div>
+  </div>
+
+  <!-- Left Panel - Branding -->
+  <div class="brand-panel">
+    <div class="brand-content">
+      <!-- Logo -->
+      <div class="logo">
+        <div class="logo-mark">
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M10 16L14 20L22 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="logo-text">TaskFlow</span>
+      </div>
+
+      <!-- Hero Text -->
+      <div class="hero-content">
+        <h1 class="hero-title">
+          Join TaskFlow,<br>
+          <span class="hero-accent">start organizing today.</span>
+        </h1>
+        <p class="hero-desc">
+          Create your organization and start managing tasks with your team in seconds.
+        </p>
+      </div>
+
+      <!-- Features -->
+      <div class="features">
+        <div class="feature">
+          <span class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            </svg>
+          </span>
+          <span class="feature-text">Enterprise-grade security</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/>
+              <circle cx="9" cy="7" r="4"/>
+              <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/>
+            </svg>
+          </span>
+          <span class="feature-text">Unlimited team members</span>
+        </div>
+        <div class="feature">
+          <span class="feature-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3"/>
+            </svg>
+          </span>
+          <span class="feature-text">Export & backup anytime</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Decorative line -->
+    <div class="brand-line"></div>
+  </div>
+
+  <!-- Right Panel - Form -->
+  <div class="form-panel">
+    <div class="form-container">
+      <!-- Mobile Logo -->
+      <div class="mobile-logo">
+        <div class="logo-mark">
+          <svg viewBox="0 0 32 32" fill="none" aria-hidden="true">
+            <rect x="2" y="2" width="28" height="28" rx="6" stroke="currentColor" stroke-width="2.5"/>
+            <path d="M10 16L14 20L22 12" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </div>
+        <span class="logo-text">TaskFlow</span>
+      </div>
+
+      <!-- Form Header -->
+      <div class="form-header">
+        <span class="form-eyebrow">Get started</span>
+        <h2 class="form-title">Create your account</h2>
+        <p class="form-desc">Already have an account? <a routerLink="/login" class="login-link">Sign in</a></p>
+      </div>
+
+      <!-- Error Message -->
+      @if (error) {
+        <div class="error-banner" role="alert" aria-live="assertive">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <circle cx="12" cy="12" r="10"/>
+            <path d="M12 8v4m0 4h.01"/>
+          </svg>
+          <span>{{ error }}</span>
+        </div>
+      }
+
+      <!-- Success Message -->
+      @if (success) {
+        <div class="success-banner" role="status" aria-live="polite">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path d="M22 11.08V12a10 10 0 11-5.93-9.14"/>
+            <path d="M22 4L12 14.01l-3-3"/>
+          </svg>
+          <span>Registration successful! Redirecting...</span>
+        </div>
+      }
+
+      <!-- Form -->
+      <form [formGroup]="registerForm" (ngSubmit)="onSubmit()" class="auth-form">
+        <div class="form-group">
+          <label for="email" class="form-label">Email address</label>
+          <input
+            id="email"
+            type="email"
+            formControlName="email"
+            class="form-input"
+            [class.input-error]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+            [attr.aria-invalid]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched"
+            [attr.aria-describedby]="registerForm.get('email')?.invalid && registerForm.get('email')?.touched ? 'email-error' : null"
+            autocomplete="email"
+            placeholder="you@example.com"
+          />
+          @if (registerForm.get('email')?.invalid && registerForm.get('email')?.touched) {
+            <span id="email-error" class="field-error" aria-live="polite">
+              @if (registerForm.get('email')?.hasError('required')) {
+                Email is required
+              } @else if (registerForm.get('email')?.hasError('email')) {
+                Please enter a valid email
+              }
+            </span>
+          }
+        </div>
+
+        <div class="form-group">
+          <label for="password" class="form-label">Password</label>
+          <input
+            id="password"
+            type="password"
+            formControlName="password"
+            class="form-input"
+            [class.input-error]="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
+            [attr.aria-invalid]="registerForm.get('password')?.touched && registerForm.get('password')?.invalid"
+            aria-describedby="password-requirements"
+            autocomplete="new-password"
+            placeholder="Create a strong password"
+          />
+          <!-- Password requirements -->
+          <div id="password-requirements" class="password-requirements" aria-live="polite" role="status">
+            <span class="req-label">Password must contain:</span>
+            <div class="req-grid">
+              <div class="req-item" [class.req-met]="hasMinLength" [attr.aria-label]="hasMinLength ? '8+ characters requirement met' : '8+ characters requirement not met'">
+                <span class="req-icon" aria-hidden="true">{{ hasMinLength ? '✓' : '○' }}</span>
+                <span>8+ characters</span>
+              </div>
+              <div class="req-item" [class.req-met]="hasUppercase" [attr.aria-label]="hasUppercase ? 'Uppercase letter requirement met' : 'Uppercase letter requirement not met'">
+                <span class="req-icon" aria-hidden="true">{{ hasUppercase ? '✓' : '○' }}</span>
+                <span>Uppercase (A-Z)</span>
+              </div>
+              <div class="req-item" [class.req-met]="hasLowercase" [attr.aria-label]="hasLowercase ? 'Lowercase letter requirement met' : 'Lowercase letter requirement not met'">
+                <span class="req-icon" aria-hidden="true">{{ hasLowercase ? '✓' : '○' }}</span>
+                <span>Lowercase (a-z)</span>
+              </div>
+              <div class="req-item" [class.req-met]="hasNumber" [attr.aria-label]="hasNumber ? 'Number requirement met' : 'Number requirement not met'">
+                <span class="req-icon" aria-hidden="true">{{ hasNumber ? '✓' : '○' }}</span>
+                <span>Number (0-9)</span>
+              </div>
+              <div class="req-item req-full" [class.req-met]="hasSpecialChar" [attr.aria-label]="hasSpecialChar ? 'Special character requirement met' : 'Special character requirement not met'">
+                <span class="req-icon" aria-hidden="true">{{ hasSpecialChar ? '✓' : '○' }}</span>
+                <span>Special character (!&#64;#$%^&*...)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="organizationName" class="form-label">Organization Name</label>
+            <input
+              id="organizationName"
+              type="text"
+              formControlName="organizationName"
+              class="form-input"
+              [class.input-error]="registerForm.get('organizationName')?.invalid && registerForm.get('organizationName')?.touched"
+              [attr.aria-invalid]="registerForm.get('organizationName')?.invalid && registerForm.get('organizationName')?.touched"
+              [attr.aria-describedby]="registerForm.get('organizationName')?.invalid && registerForm.get('organizationName')?.touched ? 'org-name-error' : null"
+              autocomplete="organization"
+              placeholder="Acme Inc."
+            />
+            @if (registerForm.get('organizationName')?.invalid && registerForm.get('organizationName')?.touched) {
+              <span id="org-name-error" class="field-error" aria-live="polite">
+                @if (registerForm.get('organizationName')?.hasError('required')) {
+                  Organization name is required
+                } @else if (registerForm.get('organizationName')?.hasError('maxlength')) {
+                  Organization name is too long
+                }
+              </span>
+            }
+          </div>
+          <div class="form-group">
+            <label for="organizationSlug" class="form-label">Slug</label>
+            <input
+              id="organizationSlug"
+              type="text"
+              formControlName="organizationSlug"
+              class="form-input"
+              [class.input-error]="registerForm.get('organizationSlug')?.invalid && registerForm.get('organizationSlug')?.touched"
+              [attr.aria-invalid]="registerForm.get('organizationSlug')?.invalid && registerForm.get('organizationSlug')?.touched"
+              [attr.aria-describedby]="registerForm.get('organizationSlug')?.invalid && registerForm.get('organizationSlug')?.touched ? 'org-slug-error' : 'slug-hint'"
+              placeholder="acme-inc"
+            />
+            <span id="slug-hint" class="field-hint">Lowercase, numbers, hyphens</span>
+            @if (registerForm.get('organizationSlug')?.invalid && registerForm.get('organizationSlug')?.touched) {
+              <span id="org-slug-error" class="field-error" aria-live="polite">
+                @if (registerForm.get('organizationSlug')?.hasError('required')) {
+                  Organization slug is required
+                } @else if (registerForm.get('organizationSlug')?.hasError('pattern')) {
+                  Use lowercase letters, numbers, and hyphens only
+                } @else if (registerForm.get('organizationSlug')?.hasError('maxlength')) {
+                  Organization slug is too long
+                }
+              </span>
+            }
+          </div>
+        </div>
+
+        <button
+          type="submit"
+          [disabled]="registerForm.invalid || isLoading"
+          class="submit-btn"
+        >
+          @if (isLoading) {
+            <svg class="spinner" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle class="spinner-track" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3"/>
+              <path class="spinner-head" d="M12 2a10 10 0 0110 10" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
+            </svg>
+            <span>Creating account...</span>
+          } @else {
+            <span>Create account</span>
+            <span class="btn-arrow">-></span>
+          }
+        </button>
+      </form>
+    </div>
+  </div>
+</div>

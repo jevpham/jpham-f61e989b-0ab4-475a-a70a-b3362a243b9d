@@ -5,24 +5,27 @@ A full-stack task management application with Role-Based Access Control (RBAC), 
 ## Tech Stack
 
 ### Backend
+
 - **NestJS** - Node.js framework
 - **TypeORM** - ORM with PostgreSQL
 - **Passport.js** - JWT authentication with refresh token rotation
 - **class-validator** - DTO validation
 
 ### Frontend
+
 - **Angular 21** - Frontend framework
 - **NgRx Signals** - State management
 - **TailwindCSS** - Styling
 - **Angular CDK** - Drag-and-drop functionality
 
 ### Shared
+
 - **NX Monorepo** - Workspace management
 - **TypeScript** - Type safety across the stack
 
 ## Project Structure
 
-```
+```text
 ├── apps/
 │   ├── api/                 # NestJS backend
 │   │   └── src/
@@ -46,17 +49,31 @@ A full-stack task management application with Role-Based Access Control (RBAC), 
 ## Features
 
 ### Authentication
+
 - JWT access tokens (15 min expiry)
 - Refresh token rotation (7 day expiry)
 - Secure password hashing with bcrypt
 - Timing attack prevention
 
 ### Role-Based Access Control
-- **Owner** - Full access, can manage organization
-- **Admin** - Can manage tasks and view audit logs
-- **Viewer** - Read-only access to tasks
+
+Three-tier role hierarchy: **Owner > Admin > Viewer**
+
+| Capability                 | Owner | Admin  | Viewer |
+|----------------------------|:-----:|:-----: |:------:|
+| View tasks                 |   ✅  |   ✅  |   ✅   |
+| Create / Edit / Delete     |   ✅  |   ✅  |   ❌   |
+| Drag-drop (change status)  |   ✅  |   ✅  |   ❌   |
+| Add members to org         |   ✅  |   ✅  |   ❌   |
+| Remove members from org    |   ✅  |   ✅  |   ❌   |
+| **Change member roles**    |   ✅  |   ❌  |   ❌   |
+| View audit logs            |   ✅  |   ✅  |   ❌   |
+
+> **Key distinction**: Only **Owners** can promote/demote users (change roles).
+> This prevents admins from escalating privileges or granting owner access to others.
 
 ### Task Management
+
 - Kanban board with drag-and-drop
 - Task status: Todo, In Progress, Review, Done
 - Task priority: Low, Medium, High, Urgent
@@ -64,11 +81,13 @@ A full-stack task management application with Role-Based Access Control (RBAC), 
 - Position-based ordering
 
 ### Audit Logging
+
 - Automatic logging of all mutations
 - Tracks user, action, resource, IP address
-- Admin-only access to audit logs
+- Owners and Admins can view audit logs
 
 ### Bonus Features
+
 - Dark mode toggle (system preference aware)
 - Task completion statistics chart
 - Keyboard shortcuts (Shift+? for help)
@@ -76,48 +95,47 @@ A full-stack task management application with Role-Based Access Control (RBAC), 
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js 20+
-- PostgreSQL 15+
+- PostgreSQL or SQLite
 - npm or yarn
 
 ### Installation
 
 1. Clone the repository:
-```bash
-git clone <repository-url>
-cd jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d
-```
+
+   ```bash
+   git clone <repository-url>
+   cd jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d
+   ```
 
 2. Install dependencies:
-```bash
-npm install
-```
+
+   ```bash
+   npm install
+   ```
 
 3. Configure environment variables:
-```bash
-# Create .env file in apps/api
-cp apps/api/.env.example apps/api/.env
-```
 
-4. Set up PostgreSQL database and update `.env`:
-```env
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=your_password
-DB_DATABASE=taskmanager
-JWT_SECRET=your-jwt-secret
-JWT_REFRESH_SECRET=your-refresh-secret
-```
+   ```bash
+   # Create .env file in apps/api
+   cp apps/api/.env.example apps/api/.env
+   ```
+
+4. Set up database and update `.env`:
+
+   **Option A: SQLite (for local development)**
 
 5. Run database migrations:
-```bash
-npx nx run api:migration:run
-```
+
+   ```bash
+   npx nx run api:migration:run
+   ```
 
 ### Development
 
 Start both backend and frontend:
+
 ```bash
 # Backend (port 3000)
 npx nx serve api
@@ -140,6 +158,7 @@ npx nx run-many -t build
 ## API Endpoints
 
 ### Authentication
+
 - `POST /auth/register` - Register new user
 - `POST /auth/login` - Login and get tokens
 - `POST /auth/refresh` - Refresh access token
@@ -147,6 +166,7 @@ npx nx run-many -t build
 - `GET /auth/profile` - Get current user profile
 
 ### Organizations
+
 - `POST /organizations` - Create organization
 - `GET /organizations/:id` - Get organization details
 - `GET /organizations/:id/members` - List members
@@ -155,6 +175,7 @@ npx nx run-many -t build
 - `DELETE /organizations/:id/members/:userId` - Remove member
 
 ### Tasks
+
 - `GET /organizations/:orgId/tasks` - List tasks
 - `POST /organizations/:orgId/tasks` - Create task
 - `GET /organizations/:orgId/tasks/:id` - Get task
@@ -163,17 +184,33 @@ npx nx run-many -t build
 - `PUT /organizations/:orgId/tasks/:id/reorder` - Reorder task
 
 ### Audit Logs (Admin only)
+
 - `GET /audit-logs` - List audit logs with pagination
 
 ## Keyboard Shortcuts
 
-| Shortcut | Action |
-|----------|--------|
-| `Ctrl + D` | Toggle dark mode |
-| `Ctrl + H` | Go to dashboard |
-| `Ctrl + T` | Go to task board |
-| `Ctrl + Shift + A` | Go to audit logs |
-| `Shift + ?` | Show shortcuts help |
+| Shortcut           | Action              | UI Fallback                      |
+|--------------------|---------------------|----------------------------------|
+| `Alt + D`          | Toggle dark mode    | Header theme toggle button       |
+| `Alt + H`          | Go to dashboard     | Header nav "Dashboard" link      |
+| `Alt + T`          | Go to task board    | Header nav "Board" link          |
+| `Alt + Shift + A`  | Go to audit logs    | Header nav "Audit" link          |
+| `Shift + ?`        | Show shortcuts help | User menu → "Shortcuts" option   |
+
+> Uses `Alt` instead of `Ctrl` to avoid conflicts with browser shortcuts.
+
+### Accessibility Note
+
+Alt-based keyboard shortcuts may conflict with assistive technologies:
+- **Screen readers** (NVDA, VoiceOver, JAWS) often use Alt as a modifier key
+- **Browser accessibility modes** may intercept Alt combinations
+
+**Workarounds:**
+- All shortcut actions are accessible via the UI (see "UI Fallback" column above)
+- Use `Shift + ?` to view the shortcuts dialog and access help
+- Future enhancement: Shortcuts will be configurable in user settings
+
+If you experience conflicts, access the same functionality through the navigation menu or header buttons.
 
 ## Security Considerations
 
@@ -183,6 +220,43 @@ npx nx run-many -t build
 - Input validation on all DTOs
 - SQL injection prevention via TypeORM
 - XSS prevention via Angular sanitization
+
+## Architecture Decisions
+
+### Why NX Monorepo?
+
+- **Shared libraries**: The `libs/data` and `libs/auth` packages allow TypeScript interfaces, DTOs, and auth utilities to be shared between frontend and backend, ensuring type safety across the stack
+- **Consistent tooling**: Single configuration for linting, testing, and building across all projects
+- **Scalable structure**: Easy to add new apps (e.g., mobile client, admin portal) that reuse existing libraries
+
+### Why NgRx Signals over Classic NgRx?
+
+- **Simpler API**: Signal-based stores require less boilerplate than traditional actions/reducers/effects pattern
+- **Fine-grained reactivity**: Signals provide more granular change detection than RxJS Observables
+- **Angular's direction**: Signals are Angular's modern approach to reactivity (introduced in Angular 16+)
+
+### Why CASL for Permissions?
+
+- **Declarative rules**: Permissions defined as readable ability rules (`can('update', 'Task')`)
+- **Framework-agnostic**: Same permission logic works on both frontend (UI visibility) and backend (guards)
+- **Composable**: Easy to extend with organization-based scoping and role inheritance
+
+### Why SQLite for Development?
+
+- **Zero setup**: No database server required, simplifies local development and demo
+- **TypeORM compatibility**: Same entity definitions work with PostgreSQL in production
+- **Instructions allow either**: The challenge permits SQLite or PostgreSQL
+
+### Trade-offs & Future Improvements
+
+| Current Implementation                 | Production Enhancement                          |
+|----------------------------------------|-------------------------------------------------|
+| JWT in localStorage                    | httpOnly cookies with CSRF tokens               |
+| Access tokens only refresh on expiry   | Silent background refresh before expiry         |
+| Basic rate limiting                    | Redis-backed rate limiting with sliding windows |
+| In-memory session tracking             | Redis session store for horizontal scaling      |
+| SQLite database                        | PostgreSQL with connection pooling              |
+| Synchronous audit logging              | Async queue (Bull/BullMQ) for audit writes      |
 
 ## License
 

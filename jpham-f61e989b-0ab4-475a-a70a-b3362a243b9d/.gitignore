@@ -50,3 +50,9 @@ Thumbs.db
 .angular
 
 __screenshots__/
+
+# SQLite database files (scoped to screenshots directory to avoid ignoring legitimate .db files)
+__screenshots__/*.sqlite
+__screenshots__/*.sqlite3
+__screenshots__/*.db
+__screenshots__/**/*.db

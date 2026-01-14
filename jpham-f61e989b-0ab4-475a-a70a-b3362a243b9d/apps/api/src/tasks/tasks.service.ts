@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, ForbiddenException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException, BadRequestException, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { Task } from './entities/task.entity';
@@ -8,6 +8,7 @@ import {
   IUser,
   TaskStatus,
   TaskCategory,
+  AuditAction,
   hasMinimumRole,
 } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 import { OrganizationsService } from '../organizations/organizations.service';
@@ -30,6 +31,8 @@ export interface PaginatedTasks {
 
 @Injectable()
 export class TasksService {
+  private readonly logger = new Logger(TasksService.name);
+
   constructor(
     @InjectRepository(Task)
     private readonly taskRepository: Repository<Task>,
@@ -37,6 +40,71 @@ export class TasksService {
     private readonly dataSource: DataSource,
     private readonly auditService: AuditService,
   ) {}
+
+  // ─────────────────────────────────────────────────────────────────────────────
+  // Private Helpers: Authorization & Database Operations
+  // ─────────────────────────────────────────────────────────────────────────────
+
+  /**
+   * Verifies user membership and checks if they have the required role.
+   * Throws ForbiddenException if access is denied.
+   */
+  private async verifyMembershipWithRole(
+    userId: string,
+    organizationId: string,
+    requiredRole: 'admin' | 'viewer' = 'viewer',
+    errorMessage = 'You do not have permission to perform this action',
+  ) {
+    const membership = await this.organizationsService.getMembership(userId, organizationId);
+    if (!membership) {
+      throw new ForbiddenException('You are not a member of this organization');
+    }
+    if (requiredRole !== 'viewer' && !hasMinimumRole(membership.role, requiredRole)) {
+      throw new ForbiddenException(errorMessage);
+    }
+    return membership;
+  }
+
+  /**
+   * Validates that a task belongs to the expected organization.
+   * Throws ForbiddenException if the task doesn't match.
+   */
+  private validateTaskOrganization(task: Task, expectedOrgId: string): void {
+    if (task.organizationId !== expectedOrgId) {
+      throw new ForbiddenException('Access denied');
+    }
+  }
+
+  /**
+   * Checks if the database supports row-level pessimistic locking.
+   * SQLite uses file-level locking and doesn't support row-level locks.
+   */
+  private supportsPessimisticLocking(): boolean {
+    const driverName = this.dataSource.options.type;
+    return driverName === 'postgres' || driverName === 'mysql' || driverName === 'mariadb';
+  }
+
+  /**
+   * Fire-and-forget audit logging with error reporting.
+   * Failures are logged but don't block the main operation.
+   */
+  private logAudit(params: {
+    action: AuditAction;
+    resource: string;
+    resourceId: string;
+    userId: string;
+    organizationId: string;
+    metadata?: Record<string, unknown>;
+  }): void {
+    this.auditService.log(params).catch((error) => {
+      this.logger.error('Failed to log audit event', {
+        action: params.action,
+        resource: params.resource,
+        resourceId: params.resourceId,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      });
+    });
+  }
 
   async findById(id: string): Promise<Task | null> {
     // Use QueryBuilder with explicit JOINs to avoid N+1 queries
@@ -105,18 +173,15 @@ export class TasksService {
     dto: CreateTaskDto,
     user: IUser,
   ): Promise<Task> {
-    // Verify user is a member of the organization
-    const membership = await this.organizationsService.getMembership(user.id, organizationId);
-    if (!membership) {
-      throw new ForbiddenException('You are not a member of this organization');
-    }
+    // Verify membership and admin role
+    await this.verifyMembershipWithRole(
+      user.id,
+      organizationId,
+      'admin',
+      'You do not have permission to create tasks',
+    );
 
-    // Only admins and owners can create tasks
-    if (!hasMinimumRole(membership.role, 'admin')) {
-      throw new ForbiddenException('You do not have permission to create tasks');
-    }
-
-    // Validate assignee is a member of the organization
+    // Validate assignee membership if provided
     if (dto.assigneeId) {
       const assigneeMembership = await this.organizationsService.getMembership(
         dto.assigneeId,
@@ -129,13 +194,16 @@ export class TasksService {
 
     // Use transaction to prevent race condition in position calculation
     const task = await this.dataSource.transaction(async (manager) => {
-      // Get max position with FOR UPDATE lock to prevent concurrent inserts from getting same position
-      const maxPositionResult = await manager
+      const queryBuilder = manager
         .createQueryBuilder(Task, 'task')
         .select('MAX(task.position)', 'max')
-        .where('task.organizationId = :organizationId', { organizationId })
-        .setLock('pessimistic_write')
-        .getRawOne();
+        .where('task.organizationId = :organizationId', { organizationId });
+
+      if (this.supportsPessimisticLocking()) {
+        queryBuilder.setLock('pessimistic_write');
+      }
+
+      const maxPositionResult = await queryBuilder.getRawOne();
 
       const newTask = manager.create(Task, {
         title: dto.title,
@@ -152,15 +220,14 @@ export class TasksService {
       return manager.save(newTask);
     });
 
-    // Audit log task creation (fire-and-forget)
-    this.auditService.log({
+    this.logAudit({
       action: 'create',
       resource: 'task',
       resourceId: task.id,
       userId: user.id,
       organizationId,
       metadata: { title: task.title },
-    }).catch(() => { /* ignore audit failures */ });
+    });
 
     return task;
   }
@@ -176,18 +243,12 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
-    // Atomic validation: task must belong to expected organization
-    if (task.organizationId !== expectedOrgId) {
-      throw new ForbiddenException('Access denied');
-    }
+    this.validateTaskOrganization(task, expectedOrgId);
 
-    // Verify user is a member of the organization
-    const membership = await this.organizationsService.getMembership(user.id, task.organizationId);
-    if (!membership) {
-      throw new ForbiddenException('You are not a member of this organization');
-    }
+    // Get membership for permission checks
+    const membership = await this.verifyMembershipWithRole(user.id, task.organizationId);
 
-    // Check permission: admins/owners can update any task, viewers can update their own
+    // Permission: admins/owners can update any task, others can update their own
     const isAdmin = hasMinimumRole(membership.role, 'admin');
     const isCreator = task.createdById === user.id;
     const isAssignee = task.assigneeId === user.id;
@@ -196,7 +257,7 @@ export class TasksService {
       throw new ForbiddenException('You do not have permission to update this task');
     }
 
-    // Validate assignee is a member of the organization
+    // Validate assignee membership if being changed
     if (dto.assigneeId !== undefined && dto.assigneeId !== null) {
       const assigneeMembership = await this.organizationsService.getMembership(
         dto.assigneeId,
@@ -207,25 +268,39 @@ export class TasksService {
       }
     }
 
-    // Capture old values for audit
+    // Capture state for reordering logic
     const oldStatus = task.status;
+    const oldPosition = task.position;
+    const newStatus = dto.status ?? task.status;
+    const newPosition = dto.position ?? task.position;
+    const statusChanged = dto.status !== undefined && dto.status !== oldStatus;
+    const positionChanged = dto.position !== undefined && dto.position !== oldPosition;
+    const shouldReorder = dto.position !== undefined && (statusChanged || positionChanged);
 
-    // Apply updates
-    if (dto.title !== undefined) task.title = dto.title;
-    if (dto.description !== undefined) task.description = dto.description;
-    if (dto.status !== undefined) task.status = dto.status;
-    if (dto.priority !== undefined) task.priority = dto.priority;
-    if (dto.category !== undefined) task.category = dto.category;
-    if (dto.dueDate !== undefined) {
-      task.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+    const applyUpdates = () => {
+      if (dto.title !== undefined) task.title = dto.title;
+      if (dto.description !== undefined) task.description = dto.description;
+      if (dto.status !== undefined) task.status = dto.status;
+      if (dto.priority !== undefined) task.priority = dto.priority;
+      if (dto.category !== undefined) task.category = dto.category;
+      if (dto.dueDate !== undefined) {
+        task.dueDate = dto.dueDate ? new Date(dto.dueDate) : null;
+      }
+      if (dto.assigneeId !== undefined) task.assigneeId = dto.assigneeId;
+      if (dto.position !== undefined) task.position = dto.position;
+    };
+
+    let savedTask: Task;
+    if (shouldReorder) {
+      savedTask = await this.executeReorderTransaction(task, oldStatus, oldPosition, newStatus, newPosition, statusChanged, positionChanged, applyUpdates);
+    } else {
+      applyUpdates();
+      savedTask = await this.taskRepository.save(task);
     }
-    if (dto.assigneeId !== undefined) task.assigneeId = dto.assigneeId;
 
-    const savedTask = await this.taskRepository.save(task);
-
-    // Audit log task update (fire-and-forget)
-    const action = dto.status !== undefined && dto.status !== oldStatus ? 'status_change' : 'update';
-    this.auditService.log({
+    // Audit logging
+    const action = statusChanged ? 'status_change' : 'update';
+    this.logAudit({
       action,
       resource: 'task',
       resourceId: task.id,
@@ -233,11 +308,103 @@ export class TasksService {
       organizationId: task.organizationId,
       metadata: {
         title: task.title,
-        ...(action === 'status_change' ? { oldStatus, newStatus: dto.status } : {}),
+        ...(statusChanged ? { oldStatus, newStatus: dto.status } : {}),
       },
-    }).catch(() => { /* ignore audit failures */ });
+    });
 
     return savedTask;
+  }
+
+  /**
+   * Executes the reorder transaction with proper locking and position updates.
+   */
+  private async executeReorderTransaction(
+    task: Task,
+    oldStatus: string,
+    oldPosition: number,
+    newStatus: string,
+    newPosition: number,
+    statusChanged: boolean,
+    positionChanged: boolean,
+    applyUpdates: () => void,
+  ): Promise<Task> {
+    return this.dataSource.transaction(async (manager) => {
+      if (this.supportsPessimisticLocking()) {
+        await manager
+          .createQueryBuilder(Task, 'task')
+          .setLock('pessimistic_write')
+          .where('task.id = :id', { id: task.id })
+          .getOne();
+      }
+
+      if (statusChanged) {
+        // Decrement positions in old column (exclude current task to prevent race condition)
+        await manager
+          .createQueryBuilder()
+          .update(Task)
+          .set({ position: () => 'position - 1' })
+          .where('organizationId = :orgId', { orgId: task.organizationId })
+          .andWhere('status = :status', { status: oldStatus })
+          .andWhere('position > :oldPos', { oldPos: oldPosition })
+          .andWhere('id != :taskId', { taskId: task.id })
+          .execute();
+
+        // Increment positions in new column (exclude current task to prevent race condition)
+        await manager
+          .createQueryBuilder()
+          .update(Task)
+          .set({ position: () => 'position + 1' })
+          .where('organizationId = :orgId', { orgId: task.organizationId })
+          .andWhere('status = :status', { status: newStatus })
+          .andWhere('position >= :newPos', { newPos: newPosition })
+          .andWhere('id != :taskId', { taskId: task.id })
+          .execute();
+      } else if (positionChanged) {
+        await this.adjustPositionsWithinColumn(manager, task.organizationId, task.id, oldStatus, oldPosition, newPosition);
+      }
+
+      applyUpdates();
+      return manager.save(task);
+    });
+  }
+
+  /**
+   * Adjusts positions when reordering within the same column.
+   * Excludes the task being moved to prevent race conditions.
+   */
+  private async adjustPositionsWithinColumn(
+    manager: import('typeorm').EntityManager,
+    organizationId: string,
+    taskId: string,
+    status: string,
+    oldPosition: number,
+    newPosition: number,
+  ): Promise<void> {
+    if (newPosition > oldPosition) {
+      // Moving down: decrement positions of tasks between old and new position
+      await manager
+        .createQueryBuilder()
+        .update(Task)
+        .set({ position: () => 'position - 1' })
+        .where('organizationId = :orgId', { orgId: organizationId })
+        .andWhere('status = :status', { status })
+        .andWhere('position > :oldPos', { oldPos: oldPosition })
+        .andWhere('position <= :newPos', { newPos: newPosition })
+        .andWhere('id != :taskId', { taskId })
+        .execute();
+    } else {
+      // Moving up: increment positions of tasks between new and old position
+      await manager
+        .createQueryBuilder()
+        .update(Task)
+        .set({ position: () => 'position + 1' })
+        .where('organizationId = :orgId', { orgId: organizationId })
+        .andWhere('status = :status', { status })
+        .andWhere('position >= :newPos', { newPos: newPosition })
+        .andWhere('position < :oldPos', { oldPos: oldPosition })
+        .andWhere('id != :taskId', { taskId })
+        .execute();
+    }
   }
 
   async delete(taskId: string, user: IUser, expectedOrgId: string): Promise<void> {
@@ -246,35 +413,28 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
-    // Atomic validation: task must belong to expected organization
-    if (task.organizationId !== expectedOrgId) {
-      throw new ForbiddenException('Access denied');
-    }
+    this.validateTaskOrganization(task, expectedOrgId);
 
-    // Verify user is a member and has admin permission
-    const membership = await this.organizationsService.getMembership(user.id, task.organizationId);
-    if (!membership) {
-      throw new ForbiddenException('You are not a member of this organization');
-    }
-
-    if (!hasMinimumRole(membership.role, 'admin')) {
-      throw new ForbiddenException('You do not have permission to delete this task');
-    }
+    await this.verifyMembershipWithRole(
+      user.id,
+      task.organizationId,
+      'admin',
+      'You do not have permission to delete this task',
+    );
 
     // Store task info before deletion for audit
     const taskInfo = { id: task.id, title: task.title, organizationId: task.organizationId };
 
     await this.taskRepository.remove(task);
 
-    // Audit log task deletion (fire-and-forget)
-    this.auditService.log({
+    this.logAudit({
       action: 'delete',
       resource: 'task',
       resourceId: taskInfo.id,
       userId: user.id,
       organizationId: taskInfo.organizationId,
       metadata: { title: taskInfo.title },
-    }).catch(() => { /* ignore audit failures */ });
+    });
   }
 
   async reorder(
@@ -283,7 +443,6 @@ export class TasksService {
     user: IUser,
     expectedOrgId: string,
   ): Promise<Task> {
-    // Validate position
     if (newPosition < 0) {
       throw new BadRequestException('Position cannot be negative');
     }
@@ -294,60 +453,45 @@ export class TasksService {
       throw new NotFoundException('Task not found');
     }
 
-    // Atomic validation: task must belong to expected organization
-    if (task.organizationId !== expectedOrgId) {
-      throw new ForbiddenException('Access denied');
-    }
-
-    // Verify user is a member of the organization
-    const membership = await this.organizationsService.getMembership(user.id, task.organizationId);
-    if (!membership) {
-      throw new ForbiddenException('You are not a member of this organization');
-    }
+    this.validateTaskOrganization(task, expectedOrgId);
+    await this.verifyMembershipWithRole(user.id, task.organizationId);
 
     const oldPosition = task.position;
-
     if (oldPosition === newPosition) {
       return task;
     }
 
-    // Use transaction for atomic reordering
+    // Execute reorder within transaction
     const reorderedTask = await this.dataSource.transaction(async (manager) => {
-      if (newPosition > oldPosition) {
-        // Moving down: decrease position of tasks in between
+      if (this.supportsPessimisticLocking()) {
         await manager
-          .createQueryBuilder()
-          .update(Task)
-          .set({ position: () => 'position - 1' })
-          .where('organizationId = :orgId', { orgId: task.organizationId })
-          .andWhere('position > :oldPos', { oldPos: oldPosition })
-          .andWhere('position <= :newPos', { newPos: newPosition })
-          .execute();
-      } else {
-        // Moving up: increase position of tasks in between
-        await manager
-          .createQueryBuilder()
-          .update(Task)
-          .set({ position: () => 'position + 1' })
-          .where('organizationId = :orgId', { orgId: task.organizationId })
-          .andWhere('position >= :newPos', { newPos: newPosition })
-          .andWhere('position < :oldPos', { oldPos: oldPosition })
-          .execute();
+          .createQueryBuilder(Task, 'task')
+          .setLock('pessimistic_write')
+          .where('task.id = :id', { id: taskId })
+          .getOne();
       }
+
+      await this.adjustPositionsWithinColumn(
+        manager,
+        task.organizationId,
+        task.id,
+        task.status,
+        oldPosition,
+        newPosition,
+      );
 
       task.position = newPosition;
       return manager.save(task);
     });
 
-    // Audit log task reorder (fire-and-forget)
-    this.auditService.log({
+    this.logAudit({
       action: 'reorder',
       resource: 'task',
       resourceId: task.id,
       userId: user.id,
       organizationId: task.organizationId,
       metadata: { title: task.title, oldPosition, newPosition },
-    }).catch(() => { /* ignore audit failures */ });
+    });
 
     return reorderedTask;
   }

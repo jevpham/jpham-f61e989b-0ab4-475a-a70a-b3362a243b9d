@@ -1,42 +1,76 @@
 @use "tailwindcss";
+@use "@angular/material" as mat;
 
 /* Tell Tailwind v4 where to scan for classes */
 @source "./app/**/*.ts";
 @source "./app/**/*.html";
 
-/* Import distinctive fonts */
-@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;0,9..144,700;1,9..144,400&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&display=swap');
+/* Import distinctive fonts - Playfair Display for editorial elegance, DM Sans for modern body */
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700;1,9..40,400&family=JetBrains+Mono:wght@400;500&display=swap');
 
-/* Custom theme - Warm slate with amber accents */
+/* Angular Material Theme - Sophisticated teal and coral */
+$taskflow-primary: mat.m2-define-palette(mat.$m2-teal-palette, 700);
+$taskflow-accent: mat.m2-define-palette(mat.$m2-deep-orange-palette, 400);
+$taskflow-warn: mat.m2-define-palette(mat.$m2-red-palette);
+
+$taskflow-light-theme: mat.m2-define-light-theme((
+  color: (
+    primary: $taskflow-primary,
+    accent: $taskflow-accent,
+    warn: $taskflow-warn,
+  ),
+  typography: mat.m2-define-typography-config(
+    $font-family: '"DM Sans", system-ui, sans-serif',
+  ),
+  density: 0,
+));
+
+$taskflow-dark-theme: mat.m2-define-dark-theme((
+  color: (
+    primary: $taskflow-primary,
+    accent: $taskflow-accent,
+    warn: $taskflow-warn,
+  ),
+));
+
+@include mat.core();
+@include mat.all-component-themes($taskflow-light-theme);
+
+.dark {
+  @include mat.all-component-colors($taskflow-dark-theme);
+}
+
+/* Custom theme - Editorial elegance with jewel tones */
 @theme {
-  /* Primary - Warm Slate */
-  --color-primary-50: #f8fafc;
-  --color-primary-100: #f1f5f9;
-  --color-primary-200: #e2e8f0;
-  --color-primary-300: #cbd5e1;
-  --color-primary-400: #94a3b8;
-  --color-primary-500: #64748b;
-  --color-primary-600: #475569;
-  --color-primary-700: #334155;
-  --color-primary-800: #1e293b;
-  --color-primary-900: #0f172a;
-  --color-primary-950: #020617;
+  /* Primary - Deep Ink */
+  --color-primary-50: #fafafa;
+  --color-primary-100: #f4f4f5;
+  --color-primary-200: #e4e4e7;
+  --color-primary-300: #d4d4d8;
+  --color-primary-400: #a1a1aa;
+  --color-primary-500: #71717a;
+  --color-primary-600: #52525b;
+  --color-primary-700: #3f3f46;
+  --color-primary-800: #27272a;
+  --color-primary-900: #18181b;
+  --color-primary-950: #09090b;
 
-  /* Accent - Warm Amber */
-  --color-accent-50: #fffbeb;
-  --color-accent-100: #fef3c7;
-  --color-accent-200: #fde68a;
-  --color-accent-300: #fcd34d;
-  --color-accent-400: #fbbf24;
-  --color-accent-500: #f59e0b;
-  --color-accent-600: #d97706;
-  --color-accent-700: #b45309;
-  --color-accent-800: #92400e;
-  --color-accent-900: #78350f;
+  /* Accent - Sophisticated Teal */
+  --color-accent-50: #f0fdfa;
+  --color-accent-100: #ccfbf1;
+  --color-accent-200: #99f6e4;
+  --color-accent-300: #5eead4;
+  --color-accent-400: #2dd4bf;
+  --color-accent-500: #14b8a6;
+  --color-accent-600: #0d9488;
+  --color-accent-700: #0f766e;
+  --color-accent-800: #115e59;
+  --color-accent-900: #134e4a;
 
-  /* Typography */
-  --font-display: 'Fraunces', Georgia, serif;
+  /* Typography - Editorial serif meets modern sans */
+  --font-display: 'Playfair Display', Georgia, serif;
   --font-body: 'DM Sans', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
 }
 
 /* Dark mode variant */
@@ -125,25 +159,23 @@ body {
   }
 }
 
-/* Gradient mesh backgrounds */
+/* Gradient mesh backgrounds - Editorial warmth with subtle depth */
 .gradient-mesh-light {
-  background-color: #f8fafc;
+  background-color: #fafaf9;
   background-image:
-    radial-gradient(at 40% 20%, rgba(251, 191, 36, 0.08) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(100, 116, 139, 0.06) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, rgba(251, 191, 36, 0.04) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, rgba(148, 163, 184, 0.05) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(251, 191, 36, 0.06) 0px, transparent 50%);
+    radial-gradient(ellipse 80% 60% at 0% 0%, rgba(20, 184, 166, 0.06) 0px, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 100% 0%, rgba(251, 146, 60, 0.05) 0px, transparent 50%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(20, 184, 166, 0.04) 0px, transparent 50%),
+    linear-gradient(180deg, rgba(250, 250, 249, 1) 0%, rgba(245, 245, 244, 1) 100%);
 }
 
 .gradient-mesh-dark {
-  background-color: #0f172a;
+  background-color: #0c0c0c;
   background-image:
-    radial-gradient(at 40% 20%, rgba(251, 191, 36, 0.06) 0px, transparent 50%),
-    radial-gradient(at 80% 0%, rgba(100, 116, 139, 0.08) 0px, transparent 50%),
-    radial-gradient(at 0% 50%, rgba(251, 191, 36, 0.03) 0px, transparent 50%),
-    radial-gradient(at 80% 50%, rgba(71, 85, 105, 0.1) 0px, transparent 50%),
-    radial-gradient(at 0% 100%, rgba(251, 191, 36, 0.04) 0px, transparent 50%);
+    radial-gradient(ellipse 80% 60% at 0% 0%, rgba(20, 184, 166, 0.08) 0px, transparent 50%),
+    radial-gradient(ellipse 60% 80% at 100% 0%, rgba(251, 146, 60, 0.06) 0px, transparent 50%),
+    radial-gradient(ellipse 70% 50% at 50% 100%, rgba(20, 184, 166, 0.05) 0px, transparent 50%),
+    linear-gradient(180deg, rgba(12, 12, 12, 1) 0%, rgba(18, 18, 18, 1) 100%);
 }
 
 /* Staggered entrance animations */
@@ -229,16 +261,16 @@ body {
 
 /* For users who prefer reduced motion - no animations, content visible */
 @media (prefers-reduced-motion: reduce) {
-  .animate-fade-in-up,
-  .animate-fade-in,
-  .animate-scale-in,
-  .animate-slide-in-right,
-  .stagger-1,
-  .stagger-2,
-  .stagger-3,
-  .stagger-4,
-  .stagger-5,
-  .stagger-6 {
+  .animate-fade-in-up:not(.cdk-drag-preview),
+  .animate-fade-in:not(.cdk-drag-preview),
+  .animate-scale-in:not(.cdk-drag-preview),
+  .animate-slide-in-right:not(.cdk-drag-preview),
+  .stagger-1:not(.cdk-drag-preview),
+  .stagger-2:not(.cdk-drag-preview),
+  .stagger-3:not(.cdk-drag-preview),
+  .stagger-4:not(.cdk-drag-preview),
+  .stagger-5:not(.cdk-drag-preview),
+  .stagger-6:not(.cdk-drag-preview) {
     animation: none !important;
     opacity: 1 !important;
     transform: none !important;
@@ -335,47 +367,56 @@ body {
   transition: all 0.2s ease;
 }
 
-/* Button base styles */
+/* Button base styles - Editorial sophistication */
 .btn-primary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.625rem 1.25rem;
+  padding: 0.75rem 1.5rem;
+  font-family: var(--font-body);
   font-size: 0.875rem;
-  font-weight: 500;
-  color: #0f172a;
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: linear-gradient(135deg, #0d9488 0%, #0f766e 100%);
   border: none;
-  border-radius: 0.5rem;
+  border-radius: 0.625rem;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 2px 4px -1px rgba(251, 191, 36, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 8px -2px rgba(13, 148, 136, 0.4), 0 0 0 0 rgba(13, 148, 136, 0);
 }
 
-.btn-primary:hover {
-  background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 100%);
-  box-shadow: 0 4px 8px -2px rgba(251, 191, 36, 0.4);
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #14b8a6 0%, #0d9488 100%);
+  box-shadow: 0 4px 16px -4px rgba(13, 148, 136, 0.5), 0 0 0 0 rgba(13, 148, 136, 0);
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .btn-primary:hover {
-    transform: translateY(-1px);
+  .btn-primary:hover:not(:disabled) {
+    transform: translateY(-2px);
   }
 
-  .btn-primary:active {
+  .btn-primary:active:not(:disabled) {
     transform: translateY(0);
   }
 }
 
 .btn-primary:focus-visible {
-  outline: 2px solid #f59e0b;
-  outline-offset: 2px;
+  outline: none;
+  box-shadow: 0 2px 8px -2px rgba(13, 148, 136, 0.4), 0 0 0 3px rgba(13, 148, 136, 0.3);
 }
 
 .btn-primary:disabled {
-  opacity: 0.5;
+  background: #d4d4d8;
+  color: #a1a1aa;
+  box-shadow: none;
   cursor: not-allowed;
   transform: none;
+}
+
+.dark .btn-primary:disabled {
+  background: #3f3f46;
+  color: #71717a;
 }
 
 .btn-secondary {
@@ -457,10 +498,15 @@ body {
   border-color: #475569;
 }
 
-.input-field:focus {
+.input-field:focus-visible {
   outline: none;
-  border-color: #f59e0b;
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.15);
+  border-color: #0d9488;
+  box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.25);
+}
+
+.dark .input-field:focus-visible {
+  border-color: #14b8a6;
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.3);
 }
 
 .input-field::placeholder {
@@ -505,6 +551,178 @@ body {
   opacity: 1;
 }
 
+/* ============================================
+   SHARED LAYOUT UTILITIES
+   ============================================ */
+
+/* Decorative background elements - shared across pages */
+.decorative-grid {
+  position: absolute;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .decorative-grid {
+  background-image:
+    linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+}
+
+.decorative-accent {
+  position: absolute;
+  top: -200px;
+  right: -200px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.08) 0%, transparent 70%);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.dark .decorative-accent {
+  background: radial-gradient(circle, rgba(13, 148, 136, 0.12) 0%, transparent 70%);
+}
+
+/* Sticky glassmorphism header - shared pattern */
+.sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(250, 250, 249, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+  flex-shrink: 0;
+}
+
+.dark .sticky-header {
+  background: rgba(12, 12, 12, 0.85);
+  border-bottom-color: rgba(255, 255, 255, 0.06);
+}
+
+/* Empty state pattern */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  text-align: center;
+}
+
+.empty-state-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-primary-100);
+  border-radius: 0.75rem;
+  color: var(--color-primary-400);
+  margin-bottom: 0.75rem;
+}
+
+.dark .empty-state-icon {
+  background: var(--color-primary-800);
+}
+
+.empty-state-title {
+  font-family: var(--font-body);
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-primary-500);
+  margin: 0;
+}
+
+.empty-state-subtitle {
+  font-family: var(--font-body);
+  font-size: 0.75rem;
+  color: var(--color-primary-400);
+  margin: 0.25rem 0 0;
+}
+
+/* Loading spinner utility */
+.loading-spinner {
+  position: relative;
+  width: 48px;
+  height: 48px;
+}
+
+.loading-spinner-track {
+  position: absolute;
+  inset: 0;
+  border: 3px solid var(--color-primary-200);
+  border-radius: 50%;
+}
+
+.dark .loading-spinner-track {
+  border-color: var(--color-primary-700);
+}
+
+.loading-spinner-fill {
+  position: absolute;
+  inset: 0;
+  border: 3px solid transparent;
+  border-top-color: var(--color-accent-600);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Transition utilities */
+.transition-base {
+  transition: all 0.2s ease;
+}
+
+.transition-smooth {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Z-index scale */
+@theme {
+  --z-base: 0;
+  --z-content: 1;
+  --z-header: 100;
+  --z-modal: 1000;
+
+  /* Spacing scale */
+  --space-xs: 0.25rem;
+  --space-sm: 0.5rem;
+  --space-md: 0.75rem;
+  --space-lg: 1rem;
+  --space-xl: 1.5rem;
+  --space-2xl: 2rem;
+
+  /* Border radius scale */
+  --radius-sm: 0.5rem;
+  --radius-md: 0.625rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+  --radius-full: 9999px;
+
+  /* Status colors */
+  --status-todo-bg: #f1f5f9;
+  --status-todo-text: #475569;
+  --status-progress-bg: #dbeafe;
+  --status-progress-text: #1d4ed8;
+  --status-review-bg: #fef3c7;
+  --status-review-text: #b45309;
+  --status-done-bg: #d1fae5;
+  --status-done-text: #047857;
+}
+
+/* ============================================
+   KANBAN STYLES
+   ============================================ */
+
 /* Kanban column styles */
 .kanban-column {
   background: linear-gradient(180deg, rgba(241, 245, 249, 0.8) 0%, rgba(241, 245, 249, 0.4) 100%);
@@ -516,38 +734,340 @@ body {
   border: 1px solid rgba(71, 85, 105, 0.4);
 }
 
-/* Drag and drop styles */
+/* ===========================================
+   DRAG AND DROP STYLES - CDK Drag Preview
+   The preview is cloned and appended to body,
+   so we need complete standalone styling here
+   =========================================== */
+
+/* Task card drag preview - CRITICAL: The preview must follow cursor smoothly */
 .cdk-drag-preview {
-  box-shadow: 0 20px 40px -8px rgba(0, 0, 0, 0.2);
+  z-index: 10000 !important;
+  cursor: grabbing !important;
+  pointer-events: none;
+  /* Prevent entrance animations from overriding the drag transform */
+  animation: none !important;
+  /* Remove any transforms that might offset the preview from cursor */
+  box-sizing: border-box;
+}
+
+/* Add class for active drag preview styling */
+.drag-preview-active {
+  /* This class is added via cdkDragPreviewClass */
+}
+
+/* Style the drag preview container */
+.cdk-drag-preview .drag-preview-container {
+  width: 280px;
+  transform: rotate(2deg);
+  transition: transform 0.15s ease;
+}
+
+/* Style the task card inside the preview */
+.cdk-drag-preview .task-card,
+.cdk-drag-preview app-task-card .task-card {
+  background: #ffffff;
+  border-radius: 10px;
+  overflow: hidden;
+  display: flex;
+
+  /* Elevated shadow with amber accent for drag feedback */
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.25),
+    0 12px 24px -8px rgba(0, 0, 0, 0.15),
+    0 0 0 2px rgba(217, 119, 6, 0.4);
+}
+
+.dark .cdk-drag-preview .task-card,
+.dark .cdk-drag-preview app-task-card .task-card {
+  background: #1e293b;
+  box-shadow:
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 12px 24px -8px rgba(0, 0, 0, 0.3),
+    0 0 0 2px rgba(217, 119, 6, 0.5);
+}
+
+/* Hide the edit indicator during drag */
+.cdk-drag-preview .task-card__edit-hint {
+  display: none !important;
+}
+
+/* Ensure the accent strip shows in preview */
+.cdk-drag-preview .task-card__accent {
+  width: 4px;
+  flex-shrink: 0;
+  background: #e2e8f0;
+}
+
+.cdk-drag-preview .task-card__accent[data-priority="urgent"] { background: #ef4444; }
+.cdk-drag-preview .task-card__accent[data-priority="high"] { background: #f97316; }
+.cdk-drag-preview .task-card__accent[data-priority="medium"] { background: #0d9488; }
+.cdk-drag-preview .task-card__accent[data-priority="low"] { background: #94a3b8; }
+
+.dark .cdk-drag-preview .task-card__accent { background: #475569; }
+.dark .cdk-drag-preview .task-card__accent[data-priority="urgent"] { background: #dc2626; }
+.dark .cdk-drag-preview .task-card__accent[data-priority="high"] { background: #ea580c; }
+.dark .cdk-drag-preview .task-card__accent[data-priority="medium"] { background: #14b8a6; }
+.dark .cdk-drag-preview .task-card__accent[data-priority="low"] { background: #64748b; }
+
+/* Content area in preview */
+.cdk-drag-preview .task-card__content {
+  flex: 1;
+  padding: 12px 14px;
+  min-width: 0;
+}
+
+/* Title in preview */
+.cdk-drag-preview .task-card__title {
+  font-family: 'DM Sans', system-ui, sans-serif;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #1e293b;
+  line-height: 1.4;
+  margin: 0 0 8px 0;
+}
+
+.dark .cdk-drag-preview .task-card__title {
+  color: #f1f5f9;
+}
+
+/* Tags in preview */
+.cdk-drag-preview .task-card__tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.cdk-drag-preview .task-card__tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 0.625rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+}
+
+.cdk-drag-preview .task-card__tag-icon {
+  font-size: 0.75rem;
+  line-height: 1;
+}
+
+/* Category tag colors in preview */
+.cdk-drag-preview .task-card__tag--category[data-category="work"] { background: #ede9fe; color: #7c3aed; }
+.cdk-drag-preview .task-card__tag--category[data-category="personal"] { background: #d1fae5; color: #059669; }
+.cdk-drag-preview .task-card__tag--category[data-category="shopping"] { background: #fef3c7; color: #d97706; }
+.cdk-drag-preview .task-card__tag--category[data-category="health"] { background: #fce7f3; color: #db2777; }
+.cdk-drag-preview .task-card__tag--category[data-category="other"] { background: #f1f5f9; color: #475569; }
+
+.dark .cdk-drag-preview .task-card__tag--category[data-category="work"] { background: rgba(124, 58, 237, 0.2); color: #a78bfa; }
+.dark .cdk-drag-preview .task-card__tag--category[data-category="personal"] { background: rgba(5, 150, 105, 0.2); color: #6ee7b7; }
+.dark .cdk-drag-preview .task-card__tag--category[data-category="shopping"] { background: rgba(217, 119, 6, 0.2); color: #fcd34d; }
+.dark .cdk-drag-preview .task-card__tag--category[data-category="health"] { background: rgba(219, 39, 119, 0.2); color: #f9a8d4; }
+.dark .cdk-drag-preview .task-card__tag--category[data-category="other"] { background: rgba(71, 85, 105, 0.3); color: #cbd5e1; }
+
+/* Priority tag colors in preview */
+.cdk-drag-preview .task-card__tag--priority[data-priority="urgent"] { background: #fef2f2; color: #dc2626; }
+.cdk-drag-preview .task-card__tag--priority[data-priority="high"] { background: #fff7ed; color: #ea580c; }
+.cdk-drag-preview .task-card__tag--priority[data-priority="medium"] { background: #f0fdfa; color: #0d9488; }
+.cdk-drag-preview .task-card__tag--priority[data-priority="low"] { background: #f8fafc; color: #64748b; }
+
+.dark .cdk-drag-preview .task-card__tag--priority[data-priority="urgent"] { background: rgba(220, 38, 38, 0.15); color: #fca5a5; }
+.dark .cdk-drag-preview .task-card__tag--priority[data-priority="high"] { background: rgba(234, 88, 12, 0.15); color: #fdba74; }
+.dark .cdk-drag-preview .task-card__tag--priority[data-priority="medium"] { background: rgba(13, 148, 136, 0.15); color: #5eead4; }
+.dark .cdk-drag-preview .task-card__tag--priority[data-priority="low"] { background: rgba(100, 116, 139, 0.2); color: #94a3b8; }
+
+/* Description in preview */
+.cdk-drag-preview .task-card__description {
+  font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0 0 10px 0;
+}
+
+.dark .cdk-drag-preview .task-card__description {
+  color: #94a3b8;
+}
+
+/* Footer in preview */
+.cdk-drag-preview .task-card__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.dark .cdk-drag-preview .task-card__footer {
+  border-top-color: #334155;
+}
+
+.cdk-drag-preview .task-card__meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cdk-drag-preview .task-card__date {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  color: #64748b;
+}
+
+.cdk-drag-preview .task-card__date svg { color: #94a3b8; }
+.dark .cdk-drag-preview .task-card__date { color: #94a3b8; }
+.dark .cdk-drag-preview .task-card__date svg { color: #64748b; }
+
+.cdk-drag-preview .task-card__date--overdue { color: #dc2626; }
+.cdk-drag-preview .task-card__date--overdue svg { color: #dc2626; }
+
+.cdk-drag-preview .task-card__overdue-badge {
+  font-size: 0.5625rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.dark .cdk-drag-preview .task-card__overdue-badge {
+  background: rgba(220, 38, 38, 0.15);
+  color: #fca5a5;
+}
+
+.cdk-drag-preview .task-card__no-date {
+  font-size: 0.6875rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.dark .cdk-drag-preview .task-card__no-date { color: #64748b; }
+
+/* Assignee in preview */
+.cdk-drag-preview .task-card__assignee {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.cdk-drag-preview .task-card__avatar {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.5625rem;
+  font-weight: 700;
+  color: #ffffff;
+  text-transform: uppercase;
+}
+
+.cdk-drag-preview .task-card__assignee-name {
+  font-size: 0.6875rem;
+  color: #64748b;
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dark .cdk-drag-preview .task-card__assignee-name { color: #94a3b8; }
+
+/* Custom drag placeholder styling - must be visible for animation target */
+.drag-placeholder {
+  background: linear-gradient(
+    135deg,
+    rgba(217, 119, 6, 0.08) 0%,
+    rgba(217, 119, 6, 0.03) 100%
+  );
+  border: 2px dashed rgba(217, 119, 6, 0.35);
+  border-radius: 10px;
+  min-height: 80px;
+  box-sizing: border-box;
+}
+
+.dark .drag-placeholder {
+  background: linear-gradient(
+    135deg,
+    rgba(217, 119, 6, 0.12) 0%,
+    rgba(217, 119, 6, 0.05) 100%
+  );
+  border-color: rgba(217, 119, 6, 0.45);
+}
+
+/* Drop list active state - highlight columns being hovered */
+.drop-zone.cdk-drop-list-dragging {
+  background: rgba(217, 119, 6, 0.04);
+  border-radius: 0.75rem;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.dark .drop-zone.cdk-drop-list-dragging {
+  background: rgba(217, 119, 6, 0.08);
+}
+
+/* Receiving drop list gets prominent highlight */
+.drop-zone.cdk-drop-list-receiving {
+  background: rgba(217, 119, 6, 0.1) !important;
+  box-shadow: inset 0 0 0 2px rgba(217, 119, 6, 0.3);
   border-radius: 0.75rem;
 }
 
+.dark .drop-zone.cdk-drop-list-receiving {
+  background: rgba(217, 119, 6, 0.15) !important;
+  box-shadow: inset 0 0 0 2px rgba(217, 119, 6, 0.4);
+}
+
+/* Smooth animations for drag operations */
 @media (prefers-reduced-motion: no-preference) {
+  /* Smooth preview movement - DO NOT add transform transition as it causes jank */
   .cdk-drag-preview {
-    transform: rotate(2deg);
-  }
-}
-
-.cdk-drag-placeholder {
-  opacity: 0.4;
-  background: #e2e8f0 !important;
-  border-radius: 0.75rem;
-  border: 2px dashed #94a3b8 !important;
-}
-
-.dark .cdk-drag-placeholder {
-  background: #334155 !important;
-  border-color: #64748b !important;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .cdk-drag-animating {
-    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    transition: box-shadow 0.2s ease;
   }
 
+  /* DISABLED: Don't animate the return - causes fly-to-corner bug */
+  /* .cdk-drag-animating { transition: transform 150ms; } */
+
+  /* Smooth reordering of other items in the list */
   .cdk-drop-list-dragging .cdk-drag:not(.cdk-drag-placeholder) {
-    transition: transform 250ms cubic-bezier(0, 0, 0.2, 1);
+    transition: transform 200ms cubic-bezier(0.2, 0, 0, 1);
   }
+
+  /* Drop zone hover transition */
+  .drop-zone {
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+  }
+}
+
+/* Completely disable the return animation for drag preview */
+.cdk-drag-animating {
+  transition: none !important;
+}
+
+/* CRITICAL: Hide preview immediately when animating (dropping) to prevent fly-to-corner bug */
+.cdk-drag-preview.cdk-drag-animating {
+  /* Instantly hide - no animation to (0,0) */
+  visibility: hidden !important;
+  opacity: 0 !important;
+  transition: none !important;
+}
+
+/* Also target the inner elements to ensure complete hiding */
+.cdk-drag-animating .task-card,
+.cdk-drag-animating app-task-card {
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 
 /* Modal backdrop with fallback */
