@@ -93,7 +93,7 @@ import { ThemeService } from '../../core/services/theme.service';
             <mat-menu #userMenu="matMenu" class="user-dropdown">
               <div class="dropdown-header">
                 <span class="dropdown-email">{{ authStore.user()?.email }}</span>
-                <span class="dropdown-org">{{ authStore.organizationId()?.slice(0, 8) }}...</span>
+                <span class="dropdown-org">{{ authStore.organizationId() ? authStore.organizationId()?.slice(0, 8) + '...' : '' }}</span>
               </div>
               <mat-divider></mat-divider>
               <button mat-menu-item (click)="showShortcutsDialog.set(true)">

@@ -15,7 +15,7 @@ import {
   standalone: true,
   imports: [CommonModule, ReactiveFormsModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './task-form.component.scss',
+  styleUrls: ['./task-form.component.scss'],
   template: `
     <div
       class="task-form-overlay"

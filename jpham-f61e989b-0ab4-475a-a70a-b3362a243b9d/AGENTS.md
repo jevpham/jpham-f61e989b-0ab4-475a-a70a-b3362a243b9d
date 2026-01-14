@@ -63,18 +63,34 @@ Users
   - email: string (unique)
   - password: string (hashed)
   - role: Owner | Admin | Viewer
-  - organizationId: FK -> Organizations
+  - organizationId: FK -> Organizations (required, "primary" org for UI defaults)
   - refreshTokenHash: string | null
   - failedLoginAttempts: number
   - lockoutUntil: Date | null
   - createdAt, updatedAt: timestamps
 
-OrganizationMemberships
+OrganizationMemberships (AUTHORITATIVE for org access)
   - id: UUID
   - userId: FK -> Users
   - organizationId: FK -> Organizations
   - role: Owner | Admin | Viewer
   - createdAt, updatedAt: timestamps
+
+**Users.organizationId vs OrganizationMemberships:**
+- `Users.organizationId` is the user's "primary" org (required). Use for:
+  - UI defaults (e.g., pre-selecting org in dropdowns)
+  - Billing/primary-org workflows
+  - Set automatically when user is created via registration
+- `OrganizationMemberships` is the AUTHORITATIVE source for all org access. Use for:
+  - Authorization checks (always query memberships for RBAC)
+  - Listing all orgs a user can access
+  - Determining role within a specific organization
+
+**Synchronization strategy:**
+- On registration: `Users.organizationId` is set to the created org (always required)
+- On membership delete: If deleted membership was the primary org, reassign `Users.organizationId` to another valid membership
+- On membership update: If role indicates primary (e.g., owner), optionally update `Users.organizationId`
+- Periodic reconciliation: Verify `Users.organizationId` references a valid membership
 
 Organizations (hierarchy)
   - id: UUID

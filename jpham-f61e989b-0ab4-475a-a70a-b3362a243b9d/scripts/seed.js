@@ -74,6 +74,7 @@ function seed() {
 
     if (existingOrg) {
       console.log('Force flag detected, re-seeding...\n');
+      console.warn('WARNING: This will delete all data from the demo organization (Demo Corp).');
     }
 
     // Hash password
@@ -94,13 +95,33 @@ function seed() {
     // Start transaction
     db.exec('BEGIN TRANSACTION');
 
-    // Clear existing data (in reverse dependency order)
-    console.log('Clearing existing data...');
-    db.exec('DELETE FROM audit_logs');
-    db.exec('DELETE FROM tasks');
-    db.exec('DELETE FROM organization_memberships');
-    db.exec('DELETE FROM users');
-    db.exec('DELETE FROM organizations');
+    // Clear existing demo data only (scoped to demo organization for safety)
+    console.log('Clearing existing demo data...');
+    if (existingOrg) {
+      const demoOrgId = existingOrg.id;
+
+      // Get demo user IDs for scoped deletion
+      const demoUsers = db.prepare('SELECT id FROM users WHERE organizationId = ?').all(demoOrgId);
+      const demoUserIds = demoUsers.map(u => u.id);
+
+      // Delete audit logs for demo users
+      if (demoUserIds.length > 0) {
+        const userPlaceholders = demoUserIds.map(() => '?').join(',');
+        db.prepare(`DELETE FROM audit_logs WHERE userId IN (${userPlaceholders})`).run(...demoUserIds);
+      }
+
+      // Delete tasks in demo organization
+      db.prepare('DELETE FROM tasks WHERE organizationId = ?').run(demoOrgId);
+
+      // Delete organization memberships for demo org
+      db.prepare('DELETE FROM organization_memberships WHERE organizationId = ?').run(demoOrgId);
+
+      // Delete users in demo organization
+      db.prepare('DELETE FROM users WHERE organizationId = ?').run(demoOrgId);
+
+      // Delete the demo organization itself
+      db.prepare('DELETE FROM organizations WHERE id = ?').run(demoOrgId);
+    }
 
     // 1. Create Organization
     console.log('Creating organization...');
@@ -226,6 +247,6 @@ function getPastDate(daysAgo) {
 try {
   seed();
 } catch (err) {
-  console.error(err);
+  // Error already logged in seed() - just exit with failure code
   process.exit(1);
 }

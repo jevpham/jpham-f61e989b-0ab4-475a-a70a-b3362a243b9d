@@ -2,6 +2,9 @@ import { Component, inject, computed, ChangeDetectionStrategy } from '@angular/c
 import { CommonModule } from '@angular/common';
 import { TasksStore } from '../../../store/tasks/tasks.store';
 
+// Generate unique ID for SVG gradients to avoid collisions across component instances
+let gradientIdCounter = 0;
+
 @Component({
   selector: 'app-task-stats',
   standalone: true,
@@ -70,7 +73,7 @@ import { TasksStore } from '../../../store/tasks/tasks.store';
                   cx="64"
                   cy="64"
                   r="56"
-                  stroke="url(#progressGradient)"
+                  [attr.stroke]="'url(#' + gradientId + ')'"
                   stroke-width="12"
                   fill="none"
                   stroke-linecap="round"
@@ -79,7 +82,7 @@ import { TasksStore } from '../../../store/tasks/tasks.store';
                   [style.stroke-dashoffset]="strokeDashoffset()"
                 />
                 <defs>
-                  <linearGradient id="progressGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                  <linearGradient [attr.id]="gradientId" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stop-color="#34d399" />
                     <stop offset="100%" stop-color="#10b981" />
                   </linearGradient>
@@ -144,6 +147,9 @@ import { TasksStore } from '../../../store/tasks/tasks.store';
 })
 export class TaskStatsComponent {
   protected readonly tasksStore = inject(TasksStore);
+
+  // Unique gradient ID for this component instance to avoid SVG ID collisions
+  protected readonly gradientId = `progressGradient-${++gradientIdCounter}`;
 
   protected readonly circumference = 2 * Math.PI * 56;
 

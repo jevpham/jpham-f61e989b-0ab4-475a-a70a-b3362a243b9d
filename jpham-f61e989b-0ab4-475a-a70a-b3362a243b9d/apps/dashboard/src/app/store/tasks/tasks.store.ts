@@ -350,18 +350,25 @@ export const TasksStore = signalStore(
               return of(null);
             }
 
-            const optimisticTasks =
-              newPosition === undefined
-                ? previousTasks.map((t) =>
-                    t.id === taskId ? { ...t, status } : t,
-                  )
-                : applyMove(previousTasks, taskId, status, newPosition);
+            // If newPosition is undefined for cross-column moves, compute end index
+            // to avoid duplicate positions in the target column
+            let effectivePosition = newPosition;
+            if (effectivePosition === undefined) {
+              // Place task at the end of the target column using max position + 1
+              // (positions may not be sequential after multiple reorderings)
+              const targetColumnTasks = previousTasks.filter((t) => t.status === status);
+              effectivePosition = targetColumnTasks.length > 0
+                ? Math.max(...targetColumnTasks.map((t) => t.position)) + 1
+                : 0;
+            }
+
+            const optimisticTasks = applyMove(previousTasks, taskId, status, effectivePosition);
 
             patchState(store, {
               tasks: optimisticTasks,
               selectedTask:
                 store.selectedTask()?.id === taskId
-                  ? { ...task, status, position: newPosition ?? task.position }
+                  ? { ...task, status, position: effectivePosition }
                   : store.selectedTask(),
               isSaving: true,
               error: null,
@@ -370,7 +377,7 @@ export const TasksStore = signalStore(
             return tasksService
               .updateTask(organizationId, taskId, {
                 status,
-                ...(newPosition !== undefined ? { position: newPosition } : {}),
+                position: effectivePosition,
               })
               .pipe(
                 tap((updatedTask) => {

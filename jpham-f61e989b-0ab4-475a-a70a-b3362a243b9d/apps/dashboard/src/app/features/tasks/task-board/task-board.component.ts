@@ -323,16 +323,16 @@ export class TaskBoardComponent implements OnInit {
 
     if (dropIndex >= columnTasks.length) {
       // Dropped at the end - position after the last task
-      return columnTasks[columnTasks.length - 1].position + 1;
+      return (columnTasks[columnTasks.length - 1].position ?? 0) + 1;
     }
 
     if (dropIndex === 0) {
       // Dropped at the beginning - position before the first task
-      return Math.max(0, columnTasks[0].position - 1);
+      return Math.max(0, (columnTasks[0].position ?? 0) - 1);
     }
 
     // Dropped in the middle - use the position of the task at that index
-    return columnTasks[dropIndex].position;
+    return columnTasks[dropIndex].position ?? 0;
   }
 
   openCreateModal() {
@@ -373,9 +373,14 @@ export class TaskBoardComponent implements OnInit {
       });
     } else {
       // Create new task - dto contains CreateTaskDto fields
+      const createDto = this.toCreateDto(dto);
+      if (!createDto) {
+        // Title validation failed - form should prevent this, but handle gracefully
+        return;
+      }
       this.tasksStore.createTask({
         organizationId,
-        dto: this.toCreateDto(dto),
+        dto: createDto,
       });
     }
     this.closeForm();
@@ -404,26 +409,29 @@ export class TaskBoardComponent implements OnInit {
 
   /**
    * Converts form data to CreateTaskDto with required title validation.
-   * Uses consistent undefined checks for all optional fields.
+   * Uses consistent null checks (dto.field != null covers both null and undefined).
+   * Returns null if title is missing - caller should validate before calling onSave.
    */
-  private toCreateDto(dto: CreateTaskDto | UpdateTaskDto): CreateTaskDto {
+  private toCreateDto(dto: CreateTaskDto | UpdateTaskDto): CreateTaskDto | null {
     if (!dto.title) {
-      throw new Error('Title is required for task creation');
+      // Return null instead of throwing - caller handles validation
+      console.warn('toCreateDto called without title - this should be validated upstream');
+      return null;
     }
 
     const result: CreateTaskDto = { title: dto.title };
 
-    // Consistent undefined/null checking for all optional fields
-    if (dto.description !== undefined && dto.description !== null) {
+    // Consistent null/undefined checking using != null for all optional fields
+    if (dto.description != null) {
       result.description = dto.description;
     }
-    if (dto.priority !== undefined) {
+    if (dto.priority != null) {
       result.priority = dto.priority;
     }
-    if (dto.category !== undefined) {
+    if (dto.category != null) {
       result.category = dto.category;
     }
-    if (dto.dueDate !== undefined && dto.dueDate !== null) {
+    if (dto.dueDate != null) {
       result.dueDate = dto.dueDate;
     }
 

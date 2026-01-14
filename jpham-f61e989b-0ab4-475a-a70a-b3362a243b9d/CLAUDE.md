@@ -184,6 +184,34 @@ The application supports both PostgreSQL and SQLite:
 - PostgreSQL/MySQL use `pessimistic_write` for concurrent updates
 - Locking strategy is auto-detected via TypeORM driver type
 
+**SQLite Concurrency Limitations:**
+- SQLite does NOT support TypeORM pessimistic locks (`lock: { mode: 'pessimistic_write' }`)
+- Using pessimistic locks on SQLite will be ignored or fail silently
+- Prefer PostgreSQL for production workloads requiring concurrent writes
+
+**Conditional Locking Pattern:**
+When writing code that needs locking, check the driver type and branch accordingly:
+```typescript
+const driverType = repo.manager.connection.options.type;
+if (driverType === 'postgres' || driverType === 'mysql') {
+  // Use transaction + pessimistic_write for concurrent safety
+  await repo.manager.transaction(async (em) => {
+    const task = await em.findOne(Task, { where: { id }, lock: { mode: 'pessimistic_write' } });
+    // ... perform update
+  });
+} else {
+  // SQLite: Use application-level locking or optimistic locking
+  // Serialize operations or use version columns for conflict detection
+  const task = await repo.findOne({ where: { id } });
+  // ... perform update with optimistic retry logic
+}
+```
+
+**Testing Recommendations:**
+- Add integration tests covering update/reorder operations under concurrency
+- Test both SQLite and PostgreSQL drivers to ensure behavior consistency
+- Use a test matrix with both database types in CI/CD pipelines
+
 ## Code Conventions
 
 ### libs/data - Shared Types

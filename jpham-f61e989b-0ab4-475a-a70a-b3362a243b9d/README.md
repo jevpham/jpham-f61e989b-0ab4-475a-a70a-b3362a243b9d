@@ -84,7 +84,7 @@ Three-tier role hierarchy: **Owner > Admin > Viewer**
 
 - Automatic logging of all mutations
 - Tracks user, action, resource, IP address
-- Admin-only access to audit logs
+- Owners and Admins can view audit logs
 
 ### Bonus Features
 
@@ -189,15 +189,28 @@ npx nx run-many -t build
 
 ## Keyboard Shortcuts
 
-| Shortcut           | Action              |
-|--------------------|---------------------|
-| `Alt + D`          | Toggle dark mode    |
-| `Alt + H`          | Go to dashboard     |
-| `Alt + T`          | Go to task board    |
-| `Alt + Shift + A`  | Go to audit logs    |
-| `Shift + ?`        | Show shortcuts help |
+| Shortcut           | Action              | UI Fallback                      |
+|--------------------|---------------------|----------------------------------|
+| `Alt + D`          | Toggle dark mode    | Header theme toggle button       |
+| `Alt + H`          | Go to dashboard     | Header nav "Dashboard" link      |
+| `Alt + T`          | Go to task board    | Header nav "Board" link          |
+| `Alt + Shift + A`  | Go to audit logs    | Header nav "Audit" link          |
+| `Shift + ?`        | Show shortcuts help | User menu → "Shortcuts" option   |
 
 > Uses `Alt` instead of `Ctrl` to avoid conflicts with browser shortcuts.
+
+### Accessibility Note
+
+Alt-based keyboard shortcuts may conflict with assistive technologies:
+- **Screen readers** (NVDA, VoiceOver, JAWS) often use Alt as a modifier key
+- **Browser accessibility modes** may intercept Alt combinations
+
+**Workarounds:**
+- All shortcut actions are accessible via the UI (see "UI Fallback" column above)
+- Use `Shift + ?` to view the shortcuts dialog and access help
+- Future enhancement: Shortcuts will be configurable in user settings
+
+If you experience conflicts, access the same functionality through the navigation menu or header buttons.
 
 ## Security Considerations
 

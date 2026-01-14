@@ -9,7 +9,7 @@ import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AuditService } from './audit.service';
 import { AuditAction, IUser } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
-import { Request } from 'express';
+import { Request, Response } from 'express';
 
 const METHOD_ACTION_MAP: Record<string, AuditAction> = {
   POST: 'create',
@@ -45,6 +45,7 @@ export class AuditInterceptor implements NestInterceptor {
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     const request = context.switchToHttp().getRequest<Request>();
+    const response = context.switchToHttp().getResponse<Response>();
     const method = request.method;
     const path = request.path;
     const user = request.user as IUser | undefined;
@@ -66,14 +67,14 @@ export class AuditInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap({
-        next: (response) => {
-          // Log successful operation
+        next: (responseBody) => {
+          // Log successful operation with actual HTTP status code
           this.auditService
             .log({
               action,
               resource,
               resourceId:
-                resourceId || this.extractIdFromResponse(response) || null,
+                resourceId || this.extractIdFromResponse(responseBody) || null,
               userId: user?.id ?? null,
               organizationId: organizationId ?? user?.organizationId ?? null,
               ipAddress: this.getClientIp(request),
@@ -81,7 +82,7 @@ export class AuditInterceptor implements NestInterceptor {
               metadata: {
                 method,
                 path,
-                statusCode: 200,
+                statusCode: response.statusCode || 200,
                 authenticated: !!user,
                 authMethod: user ? 'jwt' : 'none',
               },

@@ -2,6 +2,7 @@ import { Component, OnInit, DestroyRef, inject, ChangeDetectionStrategy, signal,
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { timer } from 'rxjs';
 import { AuthStore } from '../../../store/auth/auth.store';
 import { AuditService, AuditLogFilters } from '../../../core/services/audit.service';
 import { IAuditLog } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
@@ -80,13 +81,15 @@ export class AuditLogComponent implements OnInit {
           this.total.set(response.total);
           this.isLoading.set(false);
 
-          // Move focus to table for accessibility
-          setTimeout(() => {
-            const tableElement = this.tableContainer?.nativeElement;
-            if (tableElement) {
-              tableElement.focus({ preventScroll: true });
-            }
-          }, 100);
+          // Move focus to table for accessibility (uses RxJS timer with takeUntilDestroyed for lifecycle safety)
+          timer(100)
+            .pipe(takeUntilDestroyed(this.destroyRef))
+            .subscribe(() => {
+              const tableElement = this.tableContainer?.nativeElement;
+              if (tableElement) {
+                tableElement.focus({ preventScroll: true });
+              }
+            });
         },
         error: (err) => {
           this.error.set(this.handleError(err));
