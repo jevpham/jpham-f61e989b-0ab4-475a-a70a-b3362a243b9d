@@ -414,7 +414,7 @@ NODE_ENV=development
 
 ## Common Mistakes to Avoid
 
-1. **Checking permissions in controllers**: Put RBAC logic in services
+1. **Imperative permission checks in controllers**: Use declarative guards (@Roles, @RequirePermission) instead of if-statements. Put resource-level authorization (e.g., "can this user edit this specific task?") in services.
 2. **Returning all fields**: Use DTOs to strip sensitive data
 3. **Hardcoding roles**: Use enums from libs/data
 4. **Missing audit logs**: Log all mutations via AuditService

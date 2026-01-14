@@ -97,7 +97,7 @@ Three-tier role hierarchy: **Owner > Admin > Viewer**
 ### Prerequisites
 
 - Node.js 20+
-- PostgreSQL 15+
+- PostgreSQL or SQLite
 - npm or yarn
 
 ### Installation
@@ -122,7 +122,7 @@ Three-tier role hierarchy: **Owner > Admin > Viewer**
    cp apps/api/.env.example apps/api/.env
    ```
 
-4. Set up SQLite database and update `.env`:
+4. Set up SQLite or PostgreSQL database and update `.env`:
 
    ```env
    DB_HOST=localhost

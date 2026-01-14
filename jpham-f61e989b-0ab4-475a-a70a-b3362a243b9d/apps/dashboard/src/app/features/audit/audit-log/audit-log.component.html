@@ -1,0 +1,172 @@
+<div class="audit-container">
+  <!-- Decorative Elements -->
+  <div class="decorative-grid"></div>
+  <div class="decorative-accent"></div>
+
+  <!-- Header -->
+  <header class="audit-header">
+    <div class="header-content">
+      <div class="header-left">
+        <a routerLink="/dashboard" class="back-btn" aria-label="Back to dashboard">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+          </svg>
+        </a>
+        <div class="header-title">
+          <span class="page-subtitle">Activity History</span>
+          <h1 class="page-title">Audit Logs</h1>
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="entry-count" aria-live="polite">
+          <span class="count-number">{{ total() }}</span>
+          <span>{{ total() === 1 ? 'entry' : 'entries' }}</span>
+        </div>
+        <button class="refresh-btn" (click)="refresh()" aria-label="Refresh audit logs">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          <span>Refresh</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="audit-main">
+    <!-- Error Alert -->
+    @if (error()) {
+      <div
+        class="error-alert"
+        role="alert"
+        aria-live="assertive"
+        aria-atomic="true">
+        <svg class="error-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M12 8v4m0 4h.01"/>
+        </svg>
+        <span class="error-text">{{ error() }}</span>
+      </div>
+    }
+
+    <!-- Table Card -->
+    <div class="table-card">
+      @if (isLoading()) {
+        <!-- Loading State -->
+        <div
+          class="loading-container"
+          role="status"
+          aria-live="polite"
+          aria-busy="true">
+          <div class="loading-spinner" aria-hidden="true">
+            <div class="spinner-track"></div>
+            <div class="spinner-fill"></div>
+          </div>
+          <span class="loading-text">Loading audit logs...</span>
+        </div>
+      } @else {
+        <!-- Table -->
+        <div class="table-wrapper" #tableContainer tabindex="-1" aria-label="Audit log table">
+          <table
+            class="audit-table"
+            role="table"
+            aria-label="Audit log entries"
+            [attr.aria-rowcount]="total()">
+            <caption class="sr-only">Audit log activity history</caption>
+            <thead>
+              <tr>
+                <th scope="col" id="col-action">Action</th>
+                <th scope="col" id="col-resource">Resource</th>
+                <th scope="col" id="col-user">User</th>
+                <th scope="col" id="col-ip">IP Address</th>
+                <th scope="col" id="col-date">Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              @for (log of auditLogs(); track log.id; let idx = $index) {
+                <tr [attr.aria-rowindex]="(page() - 1) * limit() + idx + 2">
+                  <td headers="col-action">
+                    <span class="action-badge" [ngClass]="getActionClass(log.action)">
+                      {{ log.action }}
+                    </span>
+                  </td>
+                  <td headers="col-resource">
+                    <span class="resource-text">{{ log.resource }}</span>
+                    @if (log.resourceId) {
+                      <span class="resource-id">#{{ log.resourceId.slice(0, 8) }}</span>
+                    }
+                  </td>
+                  <td headers="col-user">
+                    <span class="user-text">{{ log.user?.email || 'System' }}</span>
+                  </td>
+                  <td headers="col-ip">
+                    <span class="ip-text">{{ log.ipAddress || '-' }}</span>
+                  </td>
+                  <td headers="col-date">
+                    <span class="date-text">{{ formatDate(log.createdAt) }}</span>
+                  </td>
+                </tr>
+              } @empty {
+                <tr>
+                  <td colspan="5">
+                    <div class="empty-state" role="status">
+                      <div class="empty-icon" aria-hidden="true">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+                          <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
+                          <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>
+                        </svg>
+                      </div>
+                      <h3 class="empty-title">No audit logs found</h3>
+                      <p class="empty-subtitle">Activity will appear here as actions are performed</p>
+                    </div>
+                  </td>
+                </tr>
+              }
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pagination -->
+        @if (total() > limit()) {
+          <div class="pagination" role="navigation" aria-label="Audit log pagination">
+            <span class="pagination-info" aria-live="polite">
+              Showing {{ (page() - 1) * limit() + 1 }} to {{ Math.min(page() * limit(), total()) }} of {{ total() }} results
+            </span>
+            <div class="pagination-controls">
+              <button
+                class="pagination-btn"
+                (click)="previousPage()"
+                [disabled]="page() === 1"
+                [attr.aria-disabled]="page() === 1"
+                aria-label="Previous page">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                </svg>
+                Previous
+              </button>
+              <button
+                class="pagination-btn"
+                (click)="nextPage()"
+                [disabled]="page() * limit() >= total()"
+                [attr.aria-disabled]="page() * limit() >= total()"
+                aria-label="Next page">
+                Next
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                </svg>
+              </button>
+            </div>
+          </div>
+        }
+
+        <!-- Keyboard shortcuts hint -->
+        <div class="keyboard-hint" role="note" aria-label="Keyboard navigation hint">
+          <kbd>&#8592;</kbd> Previous page
+          <span class="hint-separator">|</span>
+          <kbd>&#8594;</kbd> Next page
+        </div>
+      }
+    </div>
+  </main>
+</div>

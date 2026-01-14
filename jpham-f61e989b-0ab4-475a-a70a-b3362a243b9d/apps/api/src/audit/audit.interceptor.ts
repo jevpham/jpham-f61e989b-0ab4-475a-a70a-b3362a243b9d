@@ -19,8 +19,23 @@ const METHOD_ACTION_MAP: Record<string, AuditAction> = {
   GET: 'read',
 };
 
-// Routes that should be audited
-const AUDITED_RESOURCES = ['tasks', 'organizations'];
+// Routes that should be audited by the interceptor.
+// NOTE: Auth routes (login, logout, register) are included here for automatic logging.
+const AUDITED_RESOURCES = ['tasks', 'organizations', 'auth'];
+
+// Error messages that are safe to log (don't expose internal details)
+const SAFE_ERROR_CATEGORIES: Record<number, string> = {
+  400: 'validation_error',
+  401: 'unauthorized',
+  403: 'forbidden',
+  404: 'not_found',
+  409: 'conflict',
+  422: 'unprocessable_entity',
+  429: 'rate_limited',
+  500: 'internal_error',
+  502: 'bad_gateway',
+  503: 'service_unavailable',
+};
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -45,20 +60,20 @@ export class AuditInterceptor implements NestInterceptor {
       return next.handle();
     }
 
-    const action = METHOD_ACTION_MAP[method] || 'read';
+    const action = this.determineAction(method, path);
     const resourceId = this.extractResourceId(path);
     const organizationId = this.extractOrganizationId(path);
 
     return next.handle().pipe(
       tap({
         next: (response) => {
-          // Log successful operation - wrapped in try-catch to prevent audit failures from affecting requests
+          // Log successful operation
           this.auditService
             .log({
               action,
               resource,
               resourceId:
-                resourceId || (response as { id?: string })?.id || null,
+                resourceId || this.extractIdFromResponse(response) || null,
               userId: user?.id ?? null,
               organizationId: organizationId ?? user?.organizationId ?? null,
               ipAddress: this.getClientIp(request),
@@ -67,6 +82,8 @@ export class AuditInterceptor implements NestInterceptor {
                 method,
                 path,
                 statusCode: 200,
+                authenticated: !!user,
+                authMethod: user ? 'jwt' : 'none',
               },
             })
             .catch((err) => {
@@ -74,10 +91,13 @@ export class AuditInterceptor implements NestInterceptor {
             });
         },
         error: (error) => {
-          // Log failed operation - wrapped in try-catch to prevent audit failures from affecting requests
+          const errorAction = this.mapErrorToAction(error, action);
+          const statusCode = error.status || 500;
+
+          // Log failed operation with sanitized error details
           this.auditService
             .log({
-              action: 'access_denied',
+              action: errorAction,
               resource,
               resourceId,
               userId: user?.id ?? null,
@@ -87,8 +107,12 @@ export class AuditInterceptor implements NestInterceptor {
               metadata: {
                 method,
                 path,
-                error: error.message,
-                statusCode: error.status || 500,
+                statusCode,
+                authenticated: !!user,
+                authMethod: user ? 'jwt' : 'none',
+                // Sanitized error - only log safe category, not internal details
+                errorCategory: SAFE_ERROR_CATEGORIES[statusCode] || 'unknown_error',
+                errorType: error.constructor?.name || 'Error',
               },
             })
             .catch((err) => {
@@ -97,6 +121,40 @@ export class AuditInterceptor implements NestInterceptor {
         },
       }),
     );
+  }
+
+  private determineAction(method: string, path: string): AuditAction {
+    // Extract path segments for more precise matching
+    const segments = path.split('/').filter(Boolean);
+
+    // Handle auth-specific actions (exact path matching)
+    if (segments[0] === 'auth') {
+      if (segments[1] === 'login') return 'login';
+      if (segments[1] === 'logout') return 'logout';
+      if (segments[1] === 'register') return 'register';
+    }
+
+    // Handle task-specific actions
+    if (method === 'PUT' && path.includes('/reorder')) {
+      return 'reorder';
+    }
+    if ((method === 'PUT' || method === 'PATCH') && path.includes('/status')) {
+      return 'status_change';
+    }
+
+    // Default to method-based action mapping
+    return METHOD_ACTION_MAP[method] || 'read';
+  }
+
+  private mapErrorToAction(
+    error: { status?: number },
+    fallbackAction: AuditAction,
+  ): AuditAction {
+    const status = error.status || 500;
+    if (status === 401 || status === 403) {
+      return 'access_denied';
+    }
+    return fallbackAction;
   }
 
   private extractResource(path: string): string | null {
@@ -136,6 +194,27 @@ export class AuditInterceptor implements NestInterceptor {
       const uuidRegex = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i;
       if (uuidRegex.test(parts[orgIndex + 1])) {
         return parts[orgIndex + 1];
+      }
+    }
+
+    return null;
+  }
+
+  private extractIdFromResponse(response: unknown): string | null {
+    if (!response || typeof response !== 'object') return null;
+
+    const resp = response as Record<string, unknown>;
+
+    // Handle direct { id } response
+    if ('id' in resp && typeof resp.id === 'string') {
+      return resp.id;
+    }
+
+    // Handle nested { data: { id } } response
+    if ('data' in resp && resp.data && typeof resp.data === 'object') {
+      const data = resp.data as Record<string, unknown>;
+      if ('id' in data && typeof data.id === 'string') {
+        return data.id;
       }
     }
 

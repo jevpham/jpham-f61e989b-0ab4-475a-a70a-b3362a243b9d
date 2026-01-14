@@ -137,10 +137,11 @@ export class TasksService {
         .where('task.organizationId = :organizationId', { organizationId });
 
       // Only apply pessimistic lock for databases that support it
-      const driverName = this.dataSource.driver.options.type;
+      const driverName = this.dataSource.options.type;
       if (driverName === 'postgres' || driverName === 'mysql' || driverName === 'mariadb') {
         queryBuilder.setLock('pessimistic_write');
       }
+      // SQLite can't do row-level locks; position uniqueness is best-effort in that mode.
 
       const maxPositionResult = await queryBuilder.getRawOne();
 

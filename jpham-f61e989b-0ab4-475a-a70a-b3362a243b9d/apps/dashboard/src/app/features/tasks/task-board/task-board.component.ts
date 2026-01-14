@@ -32,7 +32,7 @@ interface Column {
   selector: 'app-task-board',
   standalone: true,
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './task-board.component.scss',
+  styleUrls: ['./task-board.component.scss'],
   imports: [
     CommonModule,
     RouterLink,

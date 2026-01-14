@@ -141,6 +141,11 @@
   background: rgba(0, 0, 0, 0.04);
 }
 
+.nav-link:focus-visible {
+  outline: 2px solid var(--color-accent-600, #0d9488);
+  outline-offset: 2px;
+}
+
 :host-context(.dark) .nav-link:hover {
   color: var(--color-primary-50, #fafafa);
   background: rgba(255, 255, 255, 0.04);
@@ -212,6 +217,11 @@
   color: var(--color-primary-900, #18181b);
 }
 
+.theme-btn:focus-visible {
+  outline: 2px solid var(--color-accent-600, #0d9488);
+  outline-offset: 2px;
+}
+
 :host-context(.dark) .theme-btn {
   border-color: var(--color-primary-700, #3f3f46);
 }
@@ -245,6 +255,17 @@
 
 .avatar-btn:hover {
   transform: scale(1.05);
+}
+
+.avatar-btn:focus-visible {
+  outline: 2px solid var(--color-accent-600, #0d9488);
+  outline-offset: 2px;
+}
+
+:host-context(.dark) .nav-link:focus-visible,
+:host-context(.dark) .theme-btn:focus-visible,
+:host-context(.dark) .avatar-btn:focus-visible {
+  outline-color: var(--color-accent-400, #14b8a6);
 }
 
 /* Dropdown */
@@ -363,6 +384,11 @@
   box-shadow: 0 8px 24px rgba(13, 148, 136, 0.3);
 }
 
+.create-task-btn:focus-visible {
+  outline: 3px solid var(--color-accent-600, #0d9488);
+  outline-offset: 3px;
+}
+
 :host-context(.dark) .create-task-btn {
   background: var(--color-primary-50, #fafafa);
   color: var(--color-primary-900, #18181b);
@@ -371,6 +397,10 @@
 :host-context(.dark) .create-task-btn:hover {
   background: var(--color-accent-600, #0d9488);
   color: #fff;
+}
+
+:host-context(.dark) .create-task-btn:focus-visible {
+  outline-color: var(--color-accent-400, #14b8a6);
 }
 
 .btn-icon {
@@ -640,6 +670,17 @@
 }
 
 :host-context(.dark) .action-item:hover {
+  background: var(--color-primary-800, #27272a);
+}
+
+.action-item:focus-visible {
+  outline: 2px solid var(--color-accent-600, #0d9488);
+  outline-offset: 2px;
+  background: var(--color-primary-100, #f4f4f5);
+}
+
+:host-context(.dark) .action-item:focus-visible {
+  outline-color: var(--color-accent-400, #14b8a6);
   background: var(--color-primary-800, #27272a);
 }
 

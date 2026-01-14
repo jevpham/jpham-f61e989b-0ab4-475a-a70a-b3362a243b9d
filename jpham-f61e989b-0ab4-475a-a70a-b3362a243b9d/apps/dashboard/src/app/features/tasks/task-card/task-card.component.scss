@@ -278,6 +278,14 @@
     svg {
       color: #dc2626;
     }
+
+    :host-context(.dark) & {
+      color: #fca5a5;
+
+      svg {
+        color: #fca5a5;
+      }
+    }
   }
 }
 
