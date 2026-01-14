@@ -131,7 +131,7 @@
         @if (total() > limit()) {
           <div class="pagination" role="navigation" aria-label="Audit log pagination">
             <span class="pagination-info" aria-live="polite">
-              Showing {{ (page() - 1) * limit() + 1 }} to {{ Math.min(page() * limit(), total()) }} of {{ total() }} results
+              Showing {{ (page() - 1) * limit() + 1 }} to {{ min(page() * limit(), total()) }} of {{ total() }} results
             </span>
             <div class="pagination-controls">
               <button
@@ -158,14 +158,14 @@
               </button>
             </div>
           </div>
-        }
 
-        <!-- Keyboard shortcuts hint -->
-        <div class="keyboard-hint" role="note" aria-label="Keyboard navigation hint">
-          <kbd>&#8592;</kbd> Previous page
-          <span class="hint-separator">|</span>
-          <kbd>&#8594;</kbd> Next page
-        </div>
+          <!-- Keyboard shortcuts hint -->
+          <div class="keyboard-hint" role="note" aria-label="Keyboard navigation hint">
+            <kbd>&#8592;</kbd> Previous page
+            <span class="hint-separator">|</span>
+            <kbd>&#8594;</kbd> Next page
+          </div>
+        }
       }
     </div>
   </main>

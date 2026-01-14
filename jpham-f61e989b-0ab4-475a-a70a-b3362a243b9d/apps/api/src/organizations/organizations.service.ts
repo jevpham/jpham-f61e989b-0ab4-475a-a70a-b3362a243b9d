@@ -143,6 +143,11 @@ export class OrganizationsService {
     return membership?.role ?? null;
   }
 
+  async isUserInOrganization(userId: string, organizationId: string): Promise<boolean> {
+    const membership = await this.getMembership(userId, organizationId);
+    return !!membership;
+  }
+
   async hasPermission(userId: string, organizationId: string, requiredRole: UserRole): Promise<boolean> {
     const userRole = await this.getUserRole(userId, organizationId);
     if (!userRole) {

@@ -269,10 +269,10 @@
   &::-webkit-scrollbar-thumb {
     background: var(--color-primary-300);
     border-radius: 2px;
+  }
 
-    :host-context(.dark) & {
-      background: var(--color-primary-700);
-    }
+  :host-context(.dark) &::-webkit-scrollbar-thumb {
+    background: var(--color-primary-700);
   }
 }
 

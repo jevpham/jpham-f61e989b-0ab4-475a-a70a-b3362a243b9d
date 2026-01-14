@@ -351,8 +351,12 @@ export class TaskBoardComponent implements OnInit {
    * Type-safe conversion to CreateTaskDto
    */
   private toCreateDto(dto: CreateTaskDto | UpdateTaskDto): CreateTaskDto {
+    if (!dto.title) {
+      throw new Error('Title is required for task creation');
+    }
+
     return {
-      title: dto.title!,
+      title: dto.title,
       description: dto.description ?? undefined,
       priority: dto.priority,
       category: dto.category,

@@ -67,6 +67,8 @@ function seed() {
     if (existingOrg && !process.argv.includes('--force')) {
       console.log('Seed data already exists (Demo Corp organization found).');
       console.log('Use --force flag to re-seed: node scripts/seed.js --force\n');
+      db.pragma('foreign_keys = ON');
+      db.close();
       process.exit(0);
     }
 

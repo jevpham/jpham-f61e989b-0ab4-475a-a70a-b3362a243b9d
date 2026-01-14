@@ -398,9 +398,18 @@
   gap: 0.375rem;
   transition: all 0.2s ease;
 
+  :host-context(.dark) & {
+    color: #fca5a5;
+  }
+
   &:hover {
     background: rgba(220, 38, 38, 0.08);
     color: #b91c1c;
+
+    :host-context(.dark) & {
+      background: rgba(252, 165, 165, 0.1);
+      color: #f87171;
+    }
   }
 
   &:focus-visible {

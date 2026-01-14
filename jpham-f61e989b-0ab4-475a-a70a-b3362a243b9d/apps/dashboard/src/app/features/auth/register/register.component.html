@@ -185,9 +185,19 @@
               class="form-input"
               [class.input-error]="registerForm.get('organizationName')?.invalid && registerForm.get('organizationName')?.touched"
               [attr.aria-invalid]="registerForm.get('organizationName')?.invalid && registerForm.get('organizationName')?.touched"
+              [attr.aria-describedby]="registerForm.get('organizationName')?.invalid && registerForm.get('organizationName')?.touched ? 'org-name-error' : null"
               autocomplete="organization"
               placeholder="Acme Inc."
             />
+            @if (registerForm.get('organizationName')?.invalid && registerForm.get('organizationName')?.touched) {
+              <span id="org-name-error" class="field-error" aria-live="polite">
+                @if (registerForm.get('organizationName')?.hasError('required')) {
+                  Organization name is required
+                } @else if (registerForm.get('organizationName')?.hasError('maxlength')) {
+                  Organization name is too long
+                }
+              </span>
+            }
           </div>
           <div class="form-group">
             <label for="organizationSlug" class="form-label">Slug</label>
@@ -198,10 +208,21 @@
               class="form-input"
               [class.input-error]="registerForm.get('organizationSlug')?.invalid && registerForm.get('organizationSlug')?.touched"
               [attr.aria-invalid]="registerForm.get('organizationSlug')?.invalid && registerForm.get('organizationSlug')?.touched"
-              aria-describedby="slug-hint"
+              [attr.aria-describedby]="registerForm.get('organizationSlug')?.invalid && registerForm.get('organizationSlug')?.touched ? 'org-slug-error' : 'slug-hint'"
               placeholder="acme-inc"
             />
             <span id="slug-hint" class="field-hint">Lowercase, numbers, hyphens</span>
+            @if (registerForm.get('organizationSlug')?.invalid && registerForm.get('organizationSlug')?.touched) {
+              <span id="org-slug-error" class="field-error" aria-live="polite">
+                @if (registerForm.get('organizationSlug')?.hasError('required')) {
+                  Organization slug is required
+                } @else if (registerForm.get('organizationSlug')?.hasError('pattern')) {
+                  Use lowercase letters, numbers, and hyphens only
+                } @else if (registerForm.get('organizationSlug')?.hasError('maxlength')) {
+                  Organization slug is too long
+                }
+              </span>
+            }
           </div>
         </div>
 

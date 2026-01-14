@@ -122,17 +122,9 @@ Three-tier role hierarchy: **Owner > Admin > Viewer**
    cp apps/api/.env.example apps/api/.env
    ```
 
-4. Set up SQLite or PostgreSQL database and update `.env`:
+4. Set up database and update `.env`:
 
-   ```env
-   DB_HOST=localhost
-   DB_PORT=5432
-   DB_USERNAME=postgres
-   DB_PASSWORD=your_password
-   DB_DATABASE=taskmanager
-   JWT_SECRET=your-jwt-secret
-   JWT_REFRESH_SECRET=your-refresh-secret
-   ```
+   **Option A: SQLite (for local development)**
 
 5. Run database migrations:
 

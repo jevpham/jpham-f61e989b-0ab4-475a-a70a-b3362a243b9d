@@ -40,6 +40,10 @@ export class AuditController {
   ): Promise<{ data: IAuditLog[]; total: number; page: number; limit: number }> {
     const targetOrganizationId = query.organizationId ?? user.organizationId;
 
+    if (!targetOrganizationId) {
+      throw new ForbiddenException('Organization ID is required');
+    }
+
     const hasPermission = await this.organizationsService.hasPermission(
       user.id,
       targetOrganizationId,
@@ -129,6 +133,16 @@ export class AuditController {
         );
         if (!hasPermission) {
           throw new ForbiddenException('Access denied');
+        }
+        const targetUserBelongsToOrg =
+          await this.organizationsService.isUserInOrganization(
+            userId,
+            query.organizationId,
+          );
+        if (!targetUserBelongsToOrg) {
+          throw new ForbiddenException(
+            'User does not belong to the specified organization',
+          );
         }
       } else {
         // Must specify organizationId when querying other users' logs

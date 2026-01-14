@@ -30,7 +30,9 @@ export class AuditLogComponent implements OnInit {
   protected readonly total = signal(0);
   protected filters: AuditLogFilters = {};
 
-  protected readonly Math = Math;
+  min(a: number, b: number): number {
+    return Math.min(a, b);
+  }
 
   ngOnInit() {
     this.loadAuditLogs();
@@ -40,6 +42,12 @@ export class AuditLogComponent implements OnInit {
   handleKeyboardEvents(event: KeyboardEvent) {
     const target = event.target as HTMLElement;
     if (!target?.closest('.audit-container')) {
+      return;
+    }
+
+    // Don't intercept keyboard navigation in interactive elements.
+    const tagName = target.tagName.toLowerCase();
+    if (tagName === 'input' || tagName === 'textarea' || target.isContentEditable) {
       return;
     }
 

@@ -1,11 +1,12 @@
 import { Component, inject, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
+import { A11yModule } from '@angular/cdk/a11y';
 import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortcuts.service';
 
 @Component({
   selector: 'app-keyboard-shortcuts-dialog',
   standalone: true,
-  imports: [CommonModule],
+  imports: [CommonModule, A11yModule],
   template: `
     <div
       class="shortcuts-overlay"
@@ -19,6 +20,9 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
         aria-labelledby="shortcuts-title"
         aria-describedby="shortcuts-description"
         (click)="$event.stopPropagation()"
+        (keydown.escape)="close.emit()"
+        cdkTrapFocus
+        cdkTrapFocusAutoCapture
       >
         <header class="shortcuts-header">
           <div class="header-icon" aria-hidden="true">
@@ -36,6 +40,7 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
             class="close-btn"
             type="button"
             aria-label="Close keyboard shortcuts dialog"
+            cdkFocusInitial
           >
             <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
               <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
