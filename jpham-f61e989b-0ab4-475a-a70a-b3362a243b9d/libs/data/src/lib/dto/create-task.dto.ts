@@ -20,6 +20,7 @@ export interface UpdateTaskDto {
   category?: TaskCategory;
   dueDate?: string | null;
   assigneeId?: string | null;
+  position?: number;
 }
 
 export interface ReorderTaskDto {

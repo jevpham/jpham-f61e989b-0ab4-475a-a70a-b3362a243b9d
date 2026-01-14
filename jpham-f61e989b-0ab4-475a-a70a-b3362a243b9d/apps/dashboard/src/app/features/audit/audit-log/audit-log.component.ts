@@ -82,7 +82,10 @@ export class AuditLogComponent implements OnInit {
 
           // Move focus to table for accessibility
           setTimeout(() => {
-            this.tableContainer?.nativeElement?.focus();
+            const tableElement = this.tableContainer?.nativeElement;
+            if (tableElement) {
+              tableElement.focus({ preventScroll: true });
+            }
           }, 100);
         },
         error: (err) => {
@@ -111,16 +114,22 @@ export class AuditLogComponent implements OnInit {
     }
   }
 
+  private static readonly ACTION_CLASS_MAP: [string, string][] = [
+    ['create', 'action-badge--create'],
+    ['update', 'action-badge--update'],
+    ['delete', 'action-badge--delete'],
+    ['login', 'action-badge--login'],
+    ['logout', 'action-badge--logout'],
+    ['register', 'action-badge--register'],
+    ['access_denied', 'action-badge--denied'],
+  ];
+
   getActionClass(action: string): string {
     const actionLower = action.toLowerCase();
-    if (actionLower.includes('create')) return 'action-badge--create';
-    if (actionLower.includes('update')) return 'action-badge--update';
-    if (actionLower.includes('delete')) return 'action-badge--delete';
-    if (actionLower.includes('login')) return 'action-badge--login';
-    if (actionLower.includes('logout')) return 'action-badge--logout';
-    if (actionLower.includes('register')) return 'action-badge--register';
-    if (actionLower.includes('access_denied')) return 'action-badge--denied';
-    return 'action-badge--default';
+    const match = AuditLogComponent.ACTION_CLASS_MAP.find(([key]) =>
+      actionLower.includes(key),
+    );
+    return match?.[1] ?? 'action-badge--default';
   }
 
   formatDate(date: string | Date): string {
@@ -133,16 +142,23 @@ export class AuditLogComponent implements OnInit {
     });
   }
 
+  private static readonly ERROR_MESSAGES: Record<number, string> = {
+    403: 'You do not have permission to view audit logs',
+    404: 'Audit log service is unavailable',
+    500: 'Server error occurred while loading audit logs',
+  };
+
   private handleError(err: { status?: number; error?: { message?: string } }): string {
-    if (err.status === 403) {
-      return 'You do not have permission to view audit logs';
-    } else if (err.status === 404) {
-      return 'Audit log service is unavailable';
-    } else if (err.status === 500) {
-      return 'Server error occurred while loading audit logs';
-    } else if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    // Check for offline state first
+    if (typeof navigator !== 'undefined' && !navigator.onLine) {
       return 'No internet connection. Please check your network.';
     }
-    return err.error?.message || 'Failed to load audit logs. Please try again.';
+
+    // Use status code mapping or fall back to server message/default
+    return (
+      (err.status && AuditLogComponent.ERROR_MESSAGES[err.status]) ||
+      err.error?.message ||
+      'Failed to load audit logs. Please try again.'
+    );
   }
 }

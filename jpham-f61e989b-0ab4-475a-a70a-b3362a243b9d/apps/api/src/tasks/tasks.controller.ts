@@ -44,7 +44,7 @@ export class TasksController {
   ) {}
 
   @Get()
-  @Header('Cache-Control', 'private, max-age=30, stale-while-revalidate=60')
+  @Header('Cache-Control', 'no-store')
   @ApiOperation({ summary: 'List tasks', description: 'Get paginated tasks in an organization with optional filtering' })
   @ApiParam({ name: 'orgId', description: 'Organization ID' })
   @ApiQuery({ name: 'status', required: false, enum: ['todo', 'in_progress', 'review', 'done'] })
@@ -68,11 +68,12 @@ export class TasksController {
       throw new ForbiddenException('Access denied');
     }
 
+    // Build filters with explicit property mapping for type safety
     const filters: TaskFilters = {};
-    if (filterDto.status) filters.status = filterDto.status;
-    if (filterDto.category) filters.category = filterDto.category;
-    if (filterDto.assigneeId) filters.assigneeId = filterDto.assigneeId;
-    if (filterDto.createdById) filters.createdById = filterDto.createdById;
+    if (filterDto.status !== undefined) filters.status = filterDto.status;
+    if (filterDto.category !== undefined) filters.category = filterDto.category;
+    if (filterDto.assigneeId !== undefined) filters.assigneeId = filterDto.assigneeId;
+    if (filterDto.createdById !== undefined) filters.createdById = filterDto.createdById;
 
     const result = await this.tasksService.findByOrganization(
       orgId,

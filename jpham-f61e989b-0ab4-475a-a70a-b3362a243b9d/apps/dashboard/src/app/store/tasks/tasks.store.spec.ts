@@ -1,7 +1,7 @@
 import { TestBed } from '@angular/core/testing';
 import { of, throwError } from 'rxjs';
 import { vi, Mock } from 'vitest';
-import { TasksStore } from './tasks.store';
+import { TasksStore, applyReorder, applyMove } from './tasks.store';
 import { TasksService, TaskFilters } from '../../core/services/tasks.service';
 import {
   ITask,
@@ -20,7 +20,6 @@ describe('TasksStore', () => {
     createTask: Mock;
     updateTask: Mock;
     deleteTask: Mock;
-    reorderTask: Mock;
   };
 
   // Test fixtures
@@ -61,7 +60,6 @@ describe('TasksStore', () => {
       createTask: vi.fn(),
       updateTask: vi.fn(),
       deleteTask: vi.fn(),
-      reorderTask: vi.fn(),
     };
 
     TestBed.configureTestingModule({
@@ -309,18 +307,115 @@ describe('TasksStore', () => {
     });
   });
 
-  describe('updateTaskStatus', () => {
+  describe('reorderTask', () => {
     beforeEach(async () => {
       tasksServiceMock.getTasks.mockReturnValue(of(mockTasks));
       store.loadTasks({ organizationId });
       await flush();
     });
 
-    it('should call updateTask with status dto', async () => {
+    it('should optimistically reorder task within same column', async () => {
+      // task-1 is at position 0 in 'todo', task-2 is at position 1 in 'todo'
+      const updatedTask = { ...mockTasks[0], position: 1 };
+      tasksServiceMock.updateTask.mockReturnValue(of(updatedTask));
+
+      store.reorderTask({ organizationId, taskId: 'task-1', newPosition: 1 });
+
+      // Optimistic update should happen immediately
+      const task1 = store.tasks().find((t) => t.id === 'task-1');
+      expect(task1?.position).toBe(1);
+
+      await flush();
+
+      expect(tasksServiceMock.updateTask).toHaveBeenCalledWith(
+        organizationId,
+        'task-1',
+        { position: 1 },
+      );
+    });
+
+    it('should rollback on reorder failure', async () => {
+      const errorResponse = { error: { message: 'Reorder failed' } };
+      tasksServiceMock.updateTask.mockReturnValue(throwError(() => errorResponse));
+
+      const originalPosition = store.tasks().find((t) => t.id === 'task-1')?.position;
+
+      store.reorderTask({ organizationId, taskId: 'task-1', newPosition: 1 });
+      await flush();
+
+      // Should rollback to original position
+      const task1 = store.tasks().find((t) => t.id === 'task-1');
+      expect(task1?.position).toBe(originalPosition);
+      expect(store.error()).toBe('Reorder failed');
+    });
+
+    it('should not call API if position unchanged', async () => {
+      store.reorderTask({ organizationId, taskId: 'task-1', newPosition: 0 });
+      await flush();
+
+      expect(tasksServiceMock.updateTask).not.toHaveBeenCalled();
+    });
+
+    it('should not reorder if task not found', async () => {
+      store.reorderTask({ organizationId, taskId: 'non-existent', newPosition: 1 });
+      await flush();
+
+      expect(tasksServiceMock.updateTask).not.toHaveBeenCalled();
+    });
+
+    it('should update selectedTask if it matches reordered task', async () => {
+      store.selectTask(mockTasks[0]);
+      const updatedTask = { ...mockTasks[0], position: 1 };
+      tasksServiceMock.updateTask.mockReturnValue(of(updatedTask));
+
+      store.reorderTask({ organizationId, taskId: 'task-1', newPosition: 1 });
+      await flush();
+
+      expect(store.selectedTask()?.position).toBe(1);
+    });
+  });
+
+  describe('moveTask', () => {
+    beforeEach(async () => {
+      tasksServiceMock.getTasks.mockReturnValue(of(mockTasks));
+      store.loadTasks({ organizationId });
+      await flush();
+    });
+
+    it('should optimistically move task to different column', async () => {
+      const updatedTask = { ...mockTasks[0], status: 'in_progress' as TaskStatus, position: 1 };
+      tasksServiceMock.updateTask.mockReturnValue(of(updatedTask));
+
+      store.moveTask({
+        organizationId,
+        taskId: 'task-1',
+        status: 'in_progress',
+        newPosition: 1,
+      });
+
+      // Optimistic update should happen immediately
+      const task1 = store.tasks().find((t) => t.id === 'task-1');
+      expect(task1?.status).toBe('in_progress');
+      expect(task1?.position).toBe(1);
+
+      await flush();
+
+      expect(tasksServiceMock.updateTask).toHaveBeenCalledWith(
+        organizationId,
+        'task-1',
+        { status: 'in_progress', position: 1 },
+      );
+    });
+
+    it('should move task without explicit position', async () => {
       const updatedTask = { ...mockTasks[0], status: 'done' as TaskStatus };
       tasksServiceMock.updateTask.mockReturnValue(of(updatedTask));
 
-      store.updateTaskStatus(organizationId, 'task-1', 'done');
+      store.moveTask({
+        organizationId,
+        taskId: 'task-1',
+        status: 'done',
+      });
       await flush();
 
       expect(tasksServiceMock.updateTask).toHaveBeenCalledWith(
@@ -328,6 +423,75 @@ describe('TasksStore', () => {
         'task-1',
         { status: 'done' },
       );
+    });
+
+    it('should rollback on move failure', async () => {
+      const errorResponse = { error: { message: 'Move failed' } };
+      tasksServiceMock.updateTask.mockReturnValue(throwError(() => errorResponse));
+
+      const originalTask = store.tasks().find((t) => t.id === 'task-1');
+
+      store.moveTask({
+        organizationId,
+        taskId: 'task-1',
+        status: 'done',
+        newPosition: 0,
+      });
+      await flush();
+
+      // Should rollback to original state
+      const task1 = store.tasks().find((t) => t.id === 'task-1');
+      expect(task1?.status).toBe(originalTask?.status);
+      expect(store.error()).toBe('Move failed');
+    });
+
+    it('should not move if task not found', async () => {
+      store.moveTask({
+        organizationId,
+        taskId: 'non-existent',
+        status: 'done',
+        newPosition: 0,
+      });
+      await flush();
+
+      expect(tasksServiceMock.updateTask).not.toHaveBeenCalled();
+    });
+
+    it('should use applyReorder when moving within same status', async () => {
+      // task-1 is 'todo' at position 0, task-2 is 'todo' at position 1
+      const updatedTask = { ...mockTasks[0], position: 1 };
+      tasksServiceMock.updateTask.mockReturnValue(of(updatedTask));
+
+      store.moveTask({
+        organizationId,
+        taskId: 'task-1',
+        status: 'todo', // same status
+        newPosition: 1,
+      });
+
+      // Should reorder within column
+      const task1 = store.tasks().find((t) => t.id === 'task-1');
+      expect(task1?.position).toBe(1);
+      expect(task1?.status).toBe('todo');
+
+      await flush();
+    });
+
+    it('should update selectedTask if it matches moved task', async () => {
+      store.selectTask(mockTasks[0]);
+      const updatedTask = { ...mockTasks[0], status: 'done' as TaskStatus, position: 2 };
+      tasksServiceMock.updateTask.mockReturnValue(of(updatedTask));
+
+      store.moveTask({
+        organizationId,
+        taskId: 'task-1',
+        status: 'done',
+        newPosition: 2,
+      });
+      await flush();
+
+      expect(store.selectedTask()?.status).toBe('done');
+      expect(store.selectedTask()?.position).toBe(2);
     });
   });
 
@@ -467,5 +631,179 @@ describe('TasksStore', () => {
       // Now 3/6 done = 50%
       expect(store.completionRate()).toBe(50);
     });
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Helper Function Tests (Pure functions, tested in isolation)
+// ─────────────────────────────────────────────────────────────────────────────
+
+describe('applyReorder', () => {
+  const baseTasks: ITask[] = [
+    { id: 't1', status: 'todo' as TaskStatus, position: 0 } as ITask,
+    { id: 't2', status: 'todo' as TaskStatus, position: 1 } as ITask,
+    { id: 't3', status: 'todo' as TaskStatus, position: 2 } as ITask,
+    { id: 't4', status: 'done' as TaskStatus, position: 0 } as ITask,
+  ];
+
+  it('should return original array if task not found', () => {
+    const result = applyReorder(baseTasks, 'non-existent', 1);
+    expect(result).toBe(baseTasks);
+  });
+
+  it('should return original array if position unchanged', () => {
+    const result = applyReorder(baseTasks, 't1', 0);
+    expect(result).toBe(baseTasks);
+  });
+
+  it('should move task down (position 0 → 2)', () => {
+    const result = applyReorder(baseTasks, 't1', 2);
+
+    expect(result.find(t => t.id === 't1')?.position).toBe(2);
+    expect(result.find(t => t.id === 't2')?.position).toBe(0); // shifted down
+    expect(result.find(t => t.id === 't3')?.position).toBe(1); // shifted down
+    // Different status unaffected
+    expect(result.find(t => t.id === 't4')?.position).toBe(0);
+  });
+
+  it('should move task up (position 2 → 0)', () => {
+    const result = applyReorder(baseTasks, 't3', 0);
+
+    expect(result.find(t => t.id === 't3')?.position).toBe(0);
+    expect(result.find(t => t.id === 't1')?.position).toBe(1); // shifted up
+    expect(result.find(t => t.id === 't2')?.position).toBe(2); // shifted up
+  });
+
+  it('should move task to middle position (1 → 2)', () => {
+    const result = applyReorder(baseTasks, 't2', 2);
+
+    expect(result.find(t => t.id === 't1')?.position).toBe(0); // unaffected
+    expect(result.find(t => t.id === 't2')?.position).toBe(2);
+    expect(result.find(t => t.id === 't3')?.position).toBe(1); // shifted down
+  });
+
+  it('should not affect tasks in different status columns', () => {
+    const tasks: ITask[] = [
+      { id: 't1', status: 'todo' as TaskStatus, position: 0 } as ITask,
+      { id: 't2', status: 'todo' as TaskStatus, position: 1 } as ITask,
+      { id: 't3', status: 'in_progress' as TaskStatus, position: 0 } as ITask,
+      { id: 't4', status: 'in_progress' as TaskStatus, position: 1 } as ITask,
+    ];
+
+    const result = applyReorder(tasks, 't1', 1);
+
+    // in_progress tasks should be unchanged
+    expect(result.find(t => t.id === 't3')?.position).toBe(0);
+    expect(result.find(t => t.id === 't4')?.position).toBe(1);
+  });
+
+  it('should return new array (immutable)', () => {
+    const result = applyReorder(baseTasks, 't1', 2);
+    expect(result).not.toBe(baseTasks);
+  });
+});
+
+describe('applyMove', () => {
+  const baseTasks: ITask[] = [
+    { id: 't1', status: 'todo' as TaskStatus, position: 0 } as ITask,
+    { id: 't2', status: 'todo' as TaskStatus, position: 1 } as ITask,
+    { id: 't3', status: 'in_progress' as TaskStatus, position: 0 } as ITask,
+    { id: 't4', status: 'in_progress' as TaskStatus, position: 1 } as ITask,
+  ];
+
+  it('should return original array if task not found', () => {
+    const result = applyMove(baseTasks, 'non-existent', 'done', 0);
+    expect(result).toBe(baseTasks);
+  });
+
+  it('should delegate to applyReorder when status unchanged', () => {
+    const result = applyMove(baseTasks, 't1', 'todo', 1);
+
+    // Should reorder within column
+    expect(result.find(t => t.id === 't1')?.status).toBe('todo');
+    expect(result.find(t => t.id === 't1')?.position).toBe(1);
+    expect(result.find(t => t.id === 't2')?.position).toBe(0);
+  });
+
+  it('should move task to different column at position 0', () => {
+    const result = applyMove(baseTasks, 't1', 'in_progress', 0);
+
+    // Task moved to in_progress at position 0
+    const movedTask = result.find(t => t.id === 't1');
+    expect(movedTask?.status).toBe('in_progress');
+    expect(movedTask?.position).toBe(0);
+
+    // Original todo column: t2 shifts down
+    expect(result.find(t => t.id === 't2')?.position).toBe(0);
+
+    // Target in_progress column: existing tasks shift up
+    expect(result.find(t => t.id === 't3')?.position).toBe(1);
+    expect(result.find(t => t.id === 't4')?.position).toBe(2);
+  });
+
+  it('should move task to end of different column', () => {
+    const result = applyMove(baseTasks, 't1', 'in_progress', 2);
+
+    // Task moved to in_progress at position 2
+    const movedTask = result.find(t => t.id === 't1');
+    expect(movedTask?.status).toBe('in_progress');
+    expect(movedTask?.position).toBe(2);
+
+    // Original todo column: t2 shifts down
+    expect(result.find(t => t.id === 't2')?.position).toBe(0);
+
+    // Target column: no tasks at position >= 2, so no shifts
+    expect(result.find(t => t.id === 't3')?.position).toBe(0);
+    expect(result.find(t => t.id === 't4')?.position).toBe(1);
+  });
+
+  it('should move task to middle of different column', () => {
+    const result = applyMove(baseTasks, 't1', 'in_progress', 1);
+
+    // Task moved to in_progress at position 1
+    const movedTask = result.find(t => t.id === 't1');
+    expect(movedTask?.status).toBe('in_progress');
+    expect(movedTask?.position).toBe(1);
+
+    // Original todo column: t2 shifts down (from 1 to 0)
+    expect(result.find(t => t.id === 't2')?.position).toBe(0);
+
+    // Target column: t3 unaffected (position 0 < 1), t4 shifts up
+    expect(result.find(t => t.id === 't3')?.position).toBe(0);
+    expect(result.find(t => t.id === 't4')?.position).toBe(2);
+  });
+
+  it('should move task to empty column', () => {
+    const tasks: ITask[] = [
+      { id: 't1', status: 'todo' as TaskStatus, position: 0 } as ITask,
+      { id: 't2', status: 'todo' as TaskStatus, position: 1 } as ITask,
+    ];
+
+    const result = applyMove(tasks, 't1', 'done', 0);
+
+    const movedTask = result.find(t => t.id === 't1');
+    expect(movedTask?.status).toBe('done');
+    expect(movedTask?.position).toBe(0);
+
+    // t2 shifts down in todo column
+    expect(result.find(t => t.id === 't2')?.position).toBe(0);
+  });
+
+  it('should return new array (immutable)', () => {
+    const result = applyMove(baseTasks, 't1', 'in_progress', 0);
+    expect(result).not.toBe(baseTasks);
+  });
+
+  it('should handle moving last task from column', () => {
+    const tasks: ITask[] = [
+      { id: 't1', status: 'todo' as TaskStatus, position: 0 } as ITask,
+      { id: 't2', status: 'in_progress' as TaskStatus, position: 0 } as ITask,
+    ];
+
+    const result = applyMove(tasks, 't1', 'in_progress', 0);
+
+    expect(result.find(t => t.id === 't1')?.status).toBe('in_progress');
+    expect(result.find(t => t.id === 't1')?.position).toBe(0);
+    expect(result.find(t => t.id === 't2')?.position).toBe(1);
   });
 });

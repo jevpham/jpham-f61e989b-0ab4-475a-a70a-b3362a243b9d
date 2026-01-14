@@ -69,25 +69,29 @@ interface Column {
               </p>
             </div>
           </div>
-          @if (canCreateTask()) {
-            <button
-              (click)="openCreateModal()"
-              class="btn-primary create-btn"
-            >
-              <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-              </svg>
-              <span>New Task</span>
-            </button>
-          }
-          @if (displayRole()) {
-            <div
-              class="role-badge"
-              role="status"
-              [attr.aria-label]="'Current user role: ' + displayRole()"
-              [attr.title]="'Your role: ' + displayRole()"
-            >
-              <span class="role-label">{{ displayRole() }}</span>
+          @if (canCreateTask() || displayRole()) {
+            <div class="header-actions">
+              @if (canCreateTask()) {
+                <button
+                  (click)="openCreateModal()"
+                  class="btn-primary create-btn"
+                >
+                  <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
+                  </svg>
+                  <span>New Task</span>
+                </button>
+              }
+              @if (displayRole()) {
+                <div
+                  class="role-badge"
+                  role="status"
+                  [attr.aria-label]="'Current user role: ' + displayRole()"
+                  [attr.title]="'Your role: ' + displayRole()"
+                >
+                  <span class="role-label">{{ displayRole() }}</span>
+                </div>
+              }
             </div>
           }
         </div>
@@ -132,11 +136,10 @@ interface Column {
                   </span>
                 </div>
 
-                <!-- Drop Zone - disabled sorting within same column to prevent confusing UX -->
+                <!-- Drop Zone - sorting enabled for position reordering within column -->
                 <div
                   cdkDropList
                   [cdkDropListData]="tasksByStatus()[column.status]"
-                  [cdkDropListSortingDisabled]="true"
                   [id]="column.status"
                   (cdkDropListDropped)="onDrop($event)"
                   class="drop-zone"
@@ -278,12 +281,58 @@ export class TaskBoardComponent implements OnInit {
     const task = event.item.data as ITask;
     const newStatus = event.container.id as TaskStatus;
     const previousStatus = event.previousContainer.id as TaskStatus;
+    const previousIndex = event.previousIndex;
+    const currentIndex = event.currentIndex;
 
-    // Only update if moving between different columns (status change)
-    // Same-column sorting is disabled via [cdkDropListSortingDisabled]="true"
     if (previousStatus !== newStatus) {
-      this.tasksStore.updateTaskStatus(organizationId, task.id, newStatus);
+      // Moving between columns - update status
+      // Also update position if dropped at a specific index
+      const targetColumnTasks = event.container.data;
+      const newPosition = this.calculateNewPosition(targetColumnTasks, currentIndex);
+
+      this.tasksStore.moveTask({
+        organizationId,
+        taskId: task.id,
+        status: newStatus,
+        newPosition,
+      });
+    } else if (previousIndex !== currentIndex) {
+      // Same column - reorder within column
+      const columnTasks = event.container.data;
+      const newPosition = this.calculateNewPosition(columnTasks, currentIndex);
+
+      if (newPosition !== task.position) {
+        this.tasksStore.reorderTask({
+          organizationId,
+          taskId: task.id,
+          newPosition,
+        });
+      }
     }
+  }
+
+
+  /**
+   * Calculate the new position based on the drop index.
+   * Uses the positions of surrounding tasks to determine the correct position.
+   */
+  private calculateNewPosition(columnTasks: ITask[], dropIndex: number): number {
+    if (columnTasks.length === 0) {
+      return 0;
+    }
+
+    if (dropIndex >= columnTasks.length) {
+      // Dropped at the end - position after the last task
+      return columnTasks[columnTasks.length - 1].position + 1;
+    }
+
+    if (dropIndex === 0) {
+      // Dropped at the beginning - position before the first task
+      return Math.max(0, columnTasks[0].position - 1);
+    }
+
+    // Dropped in the middle - use the position of the task at that index
+    return columnTasks[dropIndex].position;
   }
 
   openCreateModal() {
@@ -333,35 +382,52 @@ export class TaskBoardComponent implements OnInit {
   }
 
   /**
-   * Type-safe conversion to UpdateTaskDto
+   * Converts form data to UpdateTaskDto, preserving only defined properties.
+   * Excludes undefined values to avoid overwriting existing data.
    */
   private toUpdateDto(dto: CreateTaskDto | UpdateTaskDto): UpdateTaskDto {
-    return {
-      title: dto.title,
-      description: dto.description,
-      priority: dto.priority,
-      category: dto.category,
-      dueDate: dto.dueDate,
-      // Status is only present in UpdateTaskDto
-      ...('status' in dto ? { status: dto.status } : {}),
-    };
+    const result: UpdateTaskDto = {};
+
+    if (dto.title !== undefined) result.title = dto.title;
+    if (dto.description !== undefined) result.description = dto.description;
+    if (dto.priority !== undefined) result.priority = dto.priority;
+    if (dto.category !== undefined) result.category = dto.category;
+    if (dto.dueDate !== undefined) result.dueDate = dto.dueDate;
+
+    // Status is only present in UpdateTaskDto
+    if ('status' in dto && dto.status !== undefined) {
+      result.status = dto.status;
+    }
+
+    return result;
   }
 
   /**
-   * Type-safe conversion to CreateTaskDto
+   * Converts form data to CreateTaskDto with required title validation.
+   * Uses consistent undefined checks for all optional fields.
    */
   private toCreateDto(dto: CreateTaskDto | UpdateTaskDto): CreateTaskDto {
     if (!dto.title) {
       throw new Error('Title is required for task creation');
     }
 
-    return {
-      title: dto.title,
-      description: dto.description ?? undefined,
-      priority: dto.priority,
-      category: dto.category,
-      dueDate: dto.dueDate ?? undefined,
-    };
+    const result: CreateTaskDto = { title: dto.title };
+
+    // Consistent undefined/null checking for all optional fields
+    if (dto.description !== undefined && dto.description !== null) {
+      result.description = dto.description;
+    }
+    if (dto.priority !== undefined) {
+      result.priority = dto.priority;
+    }
+    if (dto.category !== undefined) {
+      result.category = dto.category;
+    }
+    if (dto.dueDate !== undefined && dto.dueDate !== null) {
+      result.dueDate = dto.dueDate;
+    }
+
+    return result;
   }
 
   onDelete() {

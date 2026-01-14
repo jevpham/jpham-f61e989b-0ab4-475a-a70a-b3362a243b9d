@@ -2,20 +2,23 @@
 
 ## Project Overview
 
-Secure task management system with RBAC. Nx monorepo with Angular 21 frontend
-and NestJS 11 backend. TypeORM with SQLite by default (PostgreSQL supported).
-JWT auth via Passport with access/refresh token rotation.
+Secure task management system with RBAC. Nx monorepo with Angular 21 (standalone
+components, NgRx Signals, Tailwind v4 + Angular Material) frontend and NestJS
+11 backend. TypeORM uses SQLite by default (data/taskdb.sqlite) with PostgreSQL
+for production. JWT auth uses access tokens plus refresh token rotation in an
+httpOnly cookie; CSRF guard enforces Origin + X-Requested-With. API is served
+under /api with Swagger at /docs in dev.
 
 ## Architecture
 
 ```text
 apps/
-  api/           # NestJS backend - REST API with RBAC, audit logging
-  dashboard/     # Angular frontend - Task Management UI
+  api/           # NestJS backend - org-scoped REST API with audit logging
+  dashboard/     # Angular frontend - standalone components, NgRx Signals, Tailwind + Material
   api-e2e/       # API integration tests (Jest)
   dashboard-e2e/ # E2E tests (Playwright)
 libs/
-  auth/          # RBAC logic, guards, decorators
+  auth/          # Auth decorators, RolesGuard, JWT payload helpers, CASL abilities
   data/          # Shared interfaces, DTOs, enums
 ```
 
@@ -95,58 +98,77 @@ Tasks
   - createdById: FK -> Users
   - assigneeId: FK -> Users (nullable)
   - createdAt, updatedAt: timestamps
+  - createdBy?: User (optional relation)
+  - assignee?: User (optional relation)
 
 AuditLog
   - id: UUID
-  - action: string
+  - action: AuditAction
   - resource: string
   - resourceId: UUID | null
   - userId: UUID | null
   - organizationId: UUID | null
   - ipAddress: string | null
   - userAgent: string | null
-  - metadata: JSON | null
+  - metadata: Record<string, unknown> | null
   - createdAt: timestamp
+  - user?: User (optional relation)
 ```
 
 ## Role Hierarchy & Permissions
 
 ```text
 Owner
-  └── Full CRUD on all org resources
+  └── Full CRUD on org resources
+  └── Add/remove members + change member roles
   └── View audit logs
-  └── Manage users in org
 
 Admin
-  └── CRUD tasks in own org
+  └── Create/update/delete tasks in org
+  └── Add/remove members (cannot change roles)
   └── View audit logs
-  └── Read-only users
 
 Viewer
-  └── Read tasks in own org only
+  └── Read tasks in org
+  └── Update tasks they created or are assigned to (service-level check)
 ```
 
 Access scoping rules:
 
-- Users see only their organization's tasks
-- Parent org users can see child org tasks
-- Task mutations require ownership OR admin/owner role
+- OrganizationMembership is authoritative for org access (user.organizationId is the primary org only)
+- Membership is required for org resources; no implicit parent/child access
+- Task create/delete requires admin/owner; updates allow admin/owner or creator/assignee
+- Task reorder endpoint currently checks membership only (UI limits to admin/owner)
 
 ## API Endpoints
 
 ```text
-POST   /auth/login          # Returns access token
-                           # Refresh token in httpOnly cookie
-POST   /auth/register       # Create org + user
-POST   /auth/logout         # Clears refresh token
-POST   /auth/refresh        # Rotate refresh token and return access token
+All endpoints are prefixed with /api.
 
-GET    /tasks               # List accessible tasks (scoped)
-POST   /tasks               # Create task
-PUT    /tasks/:id           # Update task
-DELETE /tasks/:id           # Delete task
+POST   /auth/login                             # Returns access token; refresh token in httpOnly cookie
+POST   /auth/register                          # Create org + user
+POST   /auth/logout                            # Clears refresh token cookie
+POST   /auth/refresh                           # Rotate refresh token and return access token
 
-GET    /audit-log           # Owner/Admin only
+POST   /organizations                          # Create organization
+GET    /organizations/:id                      # Organization details (membership required)
+GET    /organizations/:id/members              # List organization members
+POST   /organizations/:id/members              # Add member (Admin+)
+PUT    /organizations/:id/members/:userId/role # Change member role (Owner only)
+DELETE /organizations/:id/members/:userId      # Remove member (Admin+)
+GET    /organizations/user/memberships         # Current user's org memberships
+
+GET    /organizations/:orgId/tasks             # List tasks (filters + pagination)
+GET    /organizations/:orgId/tasks/:id         # Get task
+POST   /organizations/:orgId/tasks             # Create task (Admin+)
+PUT    /organizations/:orgId/tasks/:id         # Update task
+DELETE /organizations/:orgId/tasks/:id         # Delete task (Admin+)
+PUT    /organizations/:orgId/tasks/:id/reorder # Reorder task
+
+GET    /audit-logs                             # Admin+ audit logs (filters + pagination)
+GET    /audit-logs/organization/:orgId         # Admin+ audit logs for org
+GET    /audit-logs/user/:userId                # Admin+ or own logs (orgId required for other users)
+GET    /audit-logs/me                          # Current user's audit logs
 ```
 
 ## Tech Stack Commands
@@ -155,6 +177,9 @@ GET    /audit-log           # Owner/Admin only
 # Development
 npx nx serve api          # API at localhost:3000
 npx nx serve dashboard    # Dashboard at localhost:4200
+
+# Seed (SQLite)
+npx ts-node scripts/seed.ts
 
 # Build
 npx nx build api
@@ -190,8 +215,6 @@ export interface IUser {
   updatedAt: Date;
 }
 
-export type UserRole = 'owner' | 'admin' | 'viewer';
-
 // libs/data/src/lib/interfaces/task.interface.ts
 export interface ITask {
   id: string;
@@ -207,8 +230,13 @@ export interface ITask {
   assigneeId: string | null;
   createdAt: Date;
   updatedAt: Date;
+  createdBy?: IUser;
+  assignee?: IUser;
 }
 ```
+
+DTOs are interfaces in `libs/data`; validation classes live in
+`apps/api/src/common/dto/validation.dto.ts` and are used with `ValidationPipe`.
 
 ### libs/auth - RBAC Logic
 
@@ -216,31 +244,41 @@ export interface ITask {
 // libs/auth/src/lib/decorators/roles.decorator.ts
 export const Roles = (...roles: UserRole[]) => SetMetadata('roles', roles);
 
-// libs/auth/src/lib/decorators/permissions.decorator.ts
-export const RequirePermission = (action: Action, resource: Resource) =>
-  SetMetadata('permission', { action, resource });
+// libs/auth/src/lib/decorators/public.decorator.ts
+export const IS_PUBLIC_KEY = 'isPublic';
+export const Public = () => SetMetadata(IS_PUBLIC_KEY, true);
 ```
+
+JWT payloads are minimized (`oid` for organization, `r` for role) and normalized
+in `libs/auth/src/lib/utils/jwt-payload.interface.ts`.
 
 ### NestJS Backend (apps/api)
 
 ```typescript
 // Global guards/interceptor: ThrottlerGuard, JwtAuthGuard, CsrfGuard,
-// RolesGuard, AuditInterceptor
+// RolesGuard, AuditInterceptor (set in AppModule)
 // Controllers: thin, delegate to services
-@Controller('tasks')
-@UseGuards(JwtAuthGuard, RolesGuard)
+@Controller('organizations/:orgId/tasks')
 export class TasksController {
   constructor(private readonly tasksService: TasksService) {}
 
-  @Get()
-  findAll(@CurrentUser() user: IUser) {
-    return this.tasksService.findAccessible(user);
+  @Post()
+  create(
+    @Param('orgId', ParseUUIDPipe) orgId: string,
+    @Body() dto: CreateTaskDto,
+    @CurrentUser() user: IUser,
+  ) {
+    return this.tasksService.create(orgId, dto, user);
   }
 
-  @Post()
-  @Roles('owner', 'admin')
-  create(@CurrentUser() user: IUser, @Body() dto: CreateTaskDto) {
-    return this.tasksService.create(user, dto);
+  @Put(':id')
+  update(
+    @Param('orgId', ParseUUIDPipe) orgId: string,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() dto: UpdateTaskDto,
+    @CurrentUser() user: IUser,
+  ) {
+    return this.tasksService.update(id, dto, user, orgId);
   }
 }
 ```
@@ -248,28 +286,26 @@ export class TasksController {
 ### Angular Frontend (apps/dashboard)
 
 ```typescript
-// Smart container component
+// Standalone feature component
 @Component({
-  selector: 'app-tasks-page',
-  template: `
-    <app-task-filters (filter)="store.setFilter($event)" />
-    <app-task-board
-      [tasks]="store.filteredTasks()"
-      [loading]="store.loading()"
-      (reorder)="store.reorder($event)"
-      (statusChange)="store.updateStatus($event)"
-      (delete)="store.delete($event)"
-    />
-  `,
+  selector: 'app-task-board',
+  standalone: true,
 })
-export class TasksPageComponent {
-  store = inject(TasksStore);
+export class TaskBoardComponent implements OnInit {
+  private readonly authStore = inject(AuthStore);
+  private readonly tasksStore = inject(TasksStore);
 
-  constructor() {
-    this.store.load();
+  ngOnInit() {
+    const organizationId = this.authStore.organizationId();
+    if (organizationId) {
+      this.tasksStore.loadTasks({ organizationId });
+    }
   }
 }
 ```
+
+All HTTP calls go through `auth.interceptor.ts` to add `X-Requested-With`,
+`withCredentials`, and handle refresh token rotation on 401 responses.
 
 ## File Structure
 
@@ -283,9 +319,11 @@ apps/api/src/
       auth.service.ts
       auth.module.ts
       strategies/jwt.strategy.ts
+      strategies/jwt-refresh.strategy.ts
       guards/jwt-auth.guard.ts
       guards/jwt-refresh.guard.ts
       guards/csrf.guard.ts
+      guards/local-auth.guard.ts
     tasks/
       tasks.controller.ts
       tasks.service.ts
@@ -296,15 +334,19 @@ apps/api/src/
       users.module.ts
       entities/user.entity.ts
     organizations/
+      organizations.controller.ts
       organizations.service.ts
       organizations.module.ts
       entities/organization.entity.ts
       entities/organization-membership.entity.ts
     audit/
+      audit.controller.ts
       audit.service.ts
       audit.module.ts
       audit.interceptor.ts
       entities/audit-log.entity.ts
+    common/
+      dto/validation.dto.ts
 
 apps/dashboard/src/
   main.ts
@@ -315,23 +357,32 @@ apps/dashboard/src/
     core/
       interceptors/auth.interceptor.ts
       guards/auth.guard.ts
+      guards/role.guard.ts
+      services/auth.service.ts
+      services/tasks.service.ts
+      services/audit.service.ts
+      services/keyboard-shortcuts.service.ts
+      services/theme.service.ts
     features/
       auth/
-        login.component.ts
-        auth.service.ts
+        login/
+        register/
+      dashboard/
+        dashboard.component.ts
       tasks/
-        tasks-page.component.ts
-        components/
-          task-board.component.ts
-          task-card.component.ts
-          task-filters.component.ts
-          task-form.component.ts
-        stores/tasks.store.ts
-        services/tasks-api.service.ts
+        task-board/
+        task-card/
+        task-form/
+      audit/
+        audit-log/
+    store/
+      auth/
+      tasks/
     shared/
       components/
-        button.component.ts
-        modal.component.ts
+        header/
+        task-stats/
+        keyboard-shortcuts-dialog/
 
 libs/data/src/
   index.ts
@@ -340,17 +391,24 @@ libs/data/src/
       user.interface.ts
       task.interface.ts
       organization.interface.ts
+      audit-log.interface.ts
     dto/
       create-task.dto.ts
-      update-task.dto.ts
       login.dto.ts
+      organization.dto.ts
+      pagination.dto.ts
+      task-filter.dto.ts
+      user.dto.ts
     enums/
       role.enum.ts
       task-status.enum.ts
+      audit-action.enum.ts
+      permission.enum.ts
 
 libs/auth/src/
   index.ts
   lib/
+    abilities/ability.factory.ts
     decorators/
       roles.decorator.ts
       current-user.decorator.ts
@@ -358,7 +416,7 @@ libs/auth/src/
     guards/
       roles.guard.ts (for backend import)
     utils/
-      token.utils.ts
+      jwt-payload.interface.ts
 ```
 
 ## Testing Strategy
@@ -366,31 +424,34 @@ libs/auth/src/
 ```typescript
 // Backend: Test RBAC logic
 describe('TasksService', () => {
-  it('returns only tasks from user org', async () => {
-    const user = { id: '1', organizationId: 'org-1', role: 'viewer' };
-    const tasks = await service.findAccessible(user);
-    expect(tasks.every(t => t.organizationId === 'org-1')).toBe(true);
+  it('applies org filter + pagination', async () => {
+    const result = await service.findByOrganization('org-1', { status: 'todo' }, 1, 50);
+    expect(result.page).toBe(1);
   });
 
   it('prevents viewer from creating tasks', async () => {
     const viewer = { id: '1', role: 'viewer' };
-    await expect(service.create(viewer, {}))
+    await expect(service.create('org-1', { title: 'Test' }, viewer))
       .rejects.toThrow(ForbiddenException);
   });
 });
 
 // Frontend: Test store logic
 describe('TasksStore', () => {
-  it('filters tasks by status', () => {
-    const store = new TasksStore();
-    store.setState({
-      tasks: [{ status: 'todo' }, { status: 'done' }],
-      filter: 'todo',
-    });
-    expect(store.filteredTasks()).toHaveLength(1);
+  it('computes completion rate', async () => {
+    tasksServiceMock.getTasks.mockReturnValue(of([
+      { status: 'done' } as ITask,
+      { status: 'todo' } as ITask,
+    ]));
+    store.loadTasks({ organizationId: 'org-1' });
+    await flush();
+    expect(store.completionRate()).toBe(50);
   });
 });
 ```
+
+API integration tests live in `apps/api-e2e`; dashboard e2e tests use Playwright
+in `apps/dashboard-e2e`.
 
 ## Environment Variables
 
@@ -403,20 +464,21 @@ DATABASE_NAME=taskdb
 DATABASE_USER=postgres          
 DATABASE_PASSWORD=yourpassword  
 
-JWT_ACCESS_SECRET=your-256-bit-secret
-JWT_REFRESH_SECRET=your-256-bit-secret
+JWT_ACCESS_SECRET=your-256-bit-secret   # >=32 chars, at least 10 unique chars
+JWT_REFRESH_SECRET=your-256-bit-secret  # >=32 chars, at least 10 unique chars
 JWT_ACCESS_EXPIRES_IN=15m
 JWT_REFRESH_EXPIRES_IN=7d
 PORT=3000
-FRONTEND_URL=http://localhost:4200
+FRONTEND_URL=http://localhost:4200     # used for CORS + CSRF origin checks
 NODE_ENV=development
+COOKIE_DOMAIN=yourdomain.com           # optional, production only
 ```
 
 ## Common Mistakes to Avoid
 
-1. **Imperative permission checks in controllers**: Use declarative guards (@Roles, @RequirePermission) instead of if-statements. Put resource-level authorization (e.g., "can this user edit this specific task?") in services.
-2. **Returning all fields**: Use DTOs to strip sensitive data
-3. **Hardcoding roles**: Use enums from libs/data
-4. **Missing audit logs**: Log all mutations via AuditService
-5. **Client-side only validation**: Always validate server-side
-6. **Exposing stack traces**: Use exception filters
+1. **Missing CSRF headers/credentials**: `X-Requested-With` + `withCredentials` are required for non-GET requests.
+2. **Calling the wrong endpoints**: Task routes are under `/api/organizations/:orgId/tasks`, not `/tasks`.
+3. **Client-only validation or RBAC**: Keep `ValidationPipe`/`validation.dto.ts` and service-level checks; use `@Roles` for coarse gating.
+4. **Returning sensitive fields**: Strip `password`, `refreshTokenHash`, and lockout fields from responses.
+5. **Hardcoding roles**: Use `UserRole` and `hasMinimumRole` from `libs/data`.
+6. **Skipping audit logs**: Log mutations/auth events via `AuditService`/`AuditInterceptor`.

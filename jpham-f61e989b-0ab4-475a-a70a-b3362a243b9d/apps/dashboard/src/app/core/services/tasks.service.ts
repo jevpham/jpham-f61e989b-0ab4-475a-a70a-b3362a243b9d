@@ -77,15 +77,4 @@ export class TasksService {
       `${this.apiUrl}/organizations/${organizationId}/tasks/${taskId}`,
     );
   }
-
-  reorderTask(
-    organizationId: string,
-    taskId: string,
-    newPosition: number,
-  ): Observable<ITask> {
-    return this.http.put<ITask>(
-      `${this.apiUrl}/organizations/${organizationId}/tasks/${taskId}/reorder`,
-      { newPosition },
-    );
-  }
 }

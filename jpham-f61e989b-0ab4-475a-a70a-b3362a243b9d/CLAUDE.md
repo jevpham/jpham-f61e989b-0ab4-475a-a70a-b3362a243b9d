@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-Secure Task Management System with Role-Based Access Control (RBAC). Nx monorepo with Angular 21 frontend and NestJS 11 backend. PostgreSQL database with TypeORM. JWT authentication via Passport.
+Secure Task Management System with Role-Based Access Control (RBAC). Nx monorepo with Angular 21 frontend and NestJS 11 backend. SQLite/PostgreSQL database with TypeORM. JWT authentication via Passport with refresh tokens. CSRF protection. Comprehensive audit logging with authentication event tracking. Dark mode support with keyboard shortcuts and WCAG accessibility features.
 
 ## Architecture
 
@@ -88,12 +88,15 @@ Tasks
 
 AuditLog
   - id: UUID
-  - userId: FK -> Users
-  - action: string
-  - resource: string
-  - resourceId: UUID
-  - timestamp: Date
-  - details: JSON
+  - userId: FK -> Users (nullable for system events)
+  - action: AuditAction (create|read|update|delete|login|login_failed|logout|register|access_denied|status_change|reorder)
+  - resource: string (tasks|organizations|auth)
+  - resourceId: UUID (nullable)
+  - organizationId: FK -> Organizations (nullable)
+  - ipAddress: string (nullable)
+  - userAgent: string (nullable)
+  - metadata: JSON (nullable, auth state, error details)
+  - createdAt: timestamp
 ```
 
 ## Role Hierarchy & Permissions
@@ -121,16 +124,29 @@ Access scoping rules:
 ## API Endpoints
 
 ```
-POST   /auth/login          # Returns JWT
-POST   /auth/register       # Create user
+POST   /auth/login           # Returns JWT + refresh token
+POST   /auth/register        # Create user
+POST   /auth/refresh         # Refresh access token
+POST   /auth/logout          # Invalidate session
 
-GET    /tasks               # List accessible tasks (scoped)
-POST   /tasks               # Create task
-PUT    /tasks/:id           # Update task
-DELETE /tasks/:id           # Delete task
+GET    /tasks                # List accessible tasks (scoped)
+POST   /tasks                # Create task
+PUT    /tasks/:id            # Update task
+DELETE /tasks/:id            # Delete task
 
-GET    /audit-log           # Owner/Admin only
+GET    /audit-logs           # List audit logs (Admin+, validated query params)
+GET    /audit-logs/me        # Get current user's audit logs
+GET    /audit-logs/user/:id  # Get specific user's logs (Admin+)
+GET    /audit-logs/organization/:id  # Get org logs (Admin+)
 ```
+
+### Audit Log Query Parameters
+- `organizationId` - UUID filter
+- `userId` - UUID filter
+- `action` - AuditAction enum
+- `resource` - tasks|organizations|auth
+- `startDate` / `endDate` - ISO 8601 date strings
+- `page` (default: 1) / `limit` (default: 50, max: 100)
 
 ## Tech Stack Commands
 
@@ -156,7 +172,17 @@ npx nx lint dashboard
 # Generate
 npx nx g @nx/nest:resource tasks --project=api
 npx nx g @nx/angular:component task-list --project=dashboard
+
+# Database
+node scripts/seed.js      # Seed SQLite database with test data
 ```
+
+## Database Support
+
+The application supports both PostgreSQL and SQLite:
+- SQLite uses file-level locking (no pessimistic row locks)
+- PostgreSQL/MySQL use `pessimistic_write` for concurrent updates
+- Locking strategy is auto-detected via TypeORM driver type
 
 ## Code Conventions
 
@@ -182,6 +208,38 @@ export class CreateTaskDto {
 
 export type TaskCategory = 'work' | 'personal';
 export type TaskStatus = 'todo' | 'in-progress' | 'done';
+
+// libs/data/src/lib/enums/audit-action.enum.ts
+export type AuditAction =
+  | 'create' | 'read' | 'update' | 'delete'
+  | 'login' | 'login_failed' | 'logout' | 'register'
+  | 'access_denied' | 'status_change' | 'reorder';
+```
+
+### Validation DTOs (Backend)
+
+```typescript
+// apps/api/src/audit/dto/audit-log-query.dto.ts
+// Use class-validator for query parameter validation
+export class AuditLogQueryDto {
+  @IsOptional()
+  @IsUUID('4', { message: 'organizationId must be a valid UUID' })
+  organizationId?: string;
+
+  @IsOptional()
+  @IsEnum(['create', 'update', 'delete', 'login', ...])
+  action?: AuditAction;
+
+  @IsOptional()
+  @IsDateString({}, { message: 'startDate must be ISO 8601 format' })
+  startDate?: string;
+
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(100)
+  limit?: number = 50;
+}
 ```
 
 ### libs/auth - RBAC Logic
@@ -274,43 +332,37 @@ export class TasksService {
 ### Angular Frontend (apps/dashboard)
 
 ```typescript
-// Smart container component
+// Components use external templates and SCSS files
 @Component({
-  selector: 'app-tasks-page',
-  template: `
-    <app-task-filters (filter)="store.setFilter($event)" />
-    <app-task-board
-      [tasks]="store.filteredTasks()"
-      [loading]="store.loading()"
-      (reorder)="store.reorder($event)"
-      (statusChange)="store.updateStatus($event)"
-      (delete)="store.delete($event)"
-    />
-  `,
+  selector: 'app-task-board',
+  standalone: true,
+  imports: [CommonModule, DragDropModule, TaskCardComponent],
+  templateUrl: './task-board.component.html',  // External template
+  styleUrl: './task-board.component.scss',      // External SCSS
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
-export class TasksPageComponent {
-  store = inject(TasksStore);
+export class TaskBoardComponent {
+  // Use Angular signals for inputs
+  tasks = input.required<ITask[]>();
+  loading = input<boolean>(false);
 
-  constructor() {
-    this.store.load();
-  }
+  // Outputs for parent communication
+  reorder = output<CdkDragDrop<ITask[]>>();
+  statusChange = output<{ id: string; status: TaskStatus }>();
 }
 
-// Dumb presentation component
+// Presentation component with signal inputs
 @Component({
   selector: 'app-task-card',
-  template: `
-    <div class="p-4 bg-white rounded-lg shadow" [class.opacity-50]="task().status === 'done'">
-      <h3>{{ task().title }}</h3>
-      <span class="badge">{{ task().category }}</span>
-    </div>
-  `,
+  templateUrl: './task-card.component.html',
+  styleUrl: './task-card.component.scss',
+  changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class TaskCardComponent {
   task = input.required<ITask>();
 }
 
-// State with NgRx Signals
+// State with NgRx Signal Store
 export const TasksStore = signalStore(
   withState<TasksState>({ tasks: [], filter: 'all', loading: false }),
   withComputed((state) => ({
@@ -326,14 +378,26 @@ export const TasksStore = signalStore(
       const tasks = await api.getAll();
       patchState(store, { tasks, loading: false });
     },
-    async reorder(event: CdkDragDrop<ITask[]>) {
-      const tasks = [...store.tasks()];
-      moveItemInArray(tasks, event.previousIndex, event.currentIndex);
-      patchState(store, { tasks });
-      await api.reorder(tasks.map((t, i) => ({ id: t.id, order: i })));
-    },
   })),
 );
+
+// Theme service with signals and system preference detection
+@Injectable({ providedIn: 'root' })
+export class ThemeService {
+  private readonly _theme = signal<Theme>(this.loadTheme());
+  readonly theme = this._theme.asReadonly();
+  readonly isDark = signal<boolean>(false);
+
+  toggleDarkMode() {
+    const current = this._theme();
+    if (current === 'system') {
+      const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      this._theme.set(systemDark ? 'light' : 'dark');
+    } else {
+      this._theme.set(current === 'dark' ? 'light' : 'dark');
+    }
+  }
+}
 ```
 
 ## File Structure
@@ -343,27 +407,46 @@ apps/api/src/
   main.ts
   app/
     app.module.ts
-    auth/
-      auth.controller.ts
-      auth.service.ts
-      auth.module.ts
-      strategies/jwt.strategy.ts
-      guards/jwt-auth.guard.ts
-    tasks/
-      tasks.controller.ts
-      tasks.service.ts
-      tasks.module.ts
-      entities/task.entity.ts
-    users/
-      users.service.ts
-      users.module.ts
-      entities/user.entity.ts
-    organizations/
-      entities/organization.entity.ts
-    audit/
-      audit.service.ts
-      audit.module.ts
-      entities/audit-log.entity.ts
+    app.controller.ts
+    app.service.ts
+  auth/
+    auth.controller.ts
+    auth.service.ts
+    auth.module.ts
+    strategies/
+      jwt.strategy.ts
+      jwt-refresh.strategy.ts
+      local.strategy.ts
+    guards/
+      jwt-auth.guard.ts
+      jwt-refresh.guard.ts
+      local-auth.guard.ts
+      csrf.guard.ts
+  tasks/
+    tasks.controller.ts
+    tasks.service.ts
+    tasks.module.ts
+    entities/task.entity.ts
+  users/
+    users.service.ts
+    users.module.ts
+    entities/user.entity.ts
+  organizations/
+    organizations.controller.ts
+    organizations.service.ts
+    organizations.module.ts
+    entities/
+      organization.entity.ts
+      organization-membership.entity.ts
+  audit/
+    audit.controller.ts
+    audit.service.ts
+    audit.module.ts
+    audit.interceptor.ts
+    entities/audit-log.entity.ts
+    dto/audit-log-query.dto.ts
+  common/
+    dto/validation.dto.ts
 
 apps/dashboard/src/
   main.ts
@@ -372,25 +455,53 @@ apps/dashboard/src/
     app.routes.ts
     app.config.ts
     core/
+      guards/
+        auth.guard.ts
+        role.guard.ts
       interceptors/auth.interceptor.ts
-      guards/auth.guard.ts
+      services/
+        auth.service.ts
+        tasks.service.ts
+        audit.service.ts
+        theme.service.ts
+        keyboard-shortcuts.service.ts
     features/
       auth/
-        login.component.ts
-        auth.service.ts
+        login/
+          login.component.ts
+          login.component.html
+          login.component.scss
+        register/
+          register.component.ts
+          register.component.html
+          register.component.scss
+        shared/_auth-shared.scss
       tasks/
-        tasks-page.component.ts
-        components/
+        task-board/
           task-board.component.ts
+          task-board.component.scss
+        task-card/
           task-card.component.ts
-          task-filters.component.ts
+          task-card.component.scss
+        task-form/
           task-form.component.ts
-        stores/tasks.store.ts
-        services/tasks-api.service.ts
+          task-form.component.scss
+      dashboard/
+        dashboard.component.ts
+        dashboard.component.scss
+      audit/
+        audit-log/
+          audit-log.component.ts
+          audit-log.component.html
+          audit-log.component.scss
     shared/
       components/
-        button.component.ts
-        modal.component.ts
+        header/header.component.ts
+        task-stats/task-stats.component.ts
+        keyboard-shortcuts-dialog/keyboard-shortcuts-dialog.component.ts
+    store/
+      auth/auth.store.ts
+      tasks/tasks.store.ts
 
 libs/data/src/
   index.ts
@@ -399,13 +510,19 @@ libs/data/src/
       user.interface.ts
       task.interface.ts
       organization.interface.ts
+      audit-log.interface.ts
     dto/
       create-task.dto.ts
-      update-task.dto.ts
+      task-filter.dto.ts
       login.dto.ts
+      user.dto.ts
+      organization.dto.ts
+      pagination.dto.ts
     enums/
       role.enum.ts
       task-status.enum.ts
+      permission.enum.ts
+      audit-action.enum.ts
 
 libs/auth/src/
   index.ts
@@ -413,12 +530,13 @@ libs/auth/src/
     decorators/
       roles.decorator.ts
       current-user.decorator.ts
+      public.decorator.ts
     abilities/
       ability.factory.ts
     guards/
-      roles.guard.ts (for backend import)
+      roles.guard.ts
     utils/
-      token.utils.ts
+      jwt-payload.interface.ts
 ```
 
 ## Testing Strategy
@@ -463,11 +581,38 @@ JWT_SECRET=your-256-bit-secret
 JWT_EXPIRATION=1h
 ```
 
+## Accessibility & Keyboard Shortcuts
+
+The dashboard implements WCAG accessibility standards:
+
+### Keyboard Shortcuts (Alt modifier to avoid browser conflicts)
+- `Alt+D` - Toggle dark mode
+- `Alt+H` - Go to dashboard
+- `Alt+T` - Go to task board
+- `Alt+Shift+A` - Go to audit logs
+- `Shift+?` - Show keyboard shortcuts dialog
+
+### Accessibility Features
+- ARIA live regions for dynamic content updates
+- Focus trap in modal dialogs
+- Keyboard navigation for tables and interactive elements
+- Form validation with `aria-describedby` error messages
+- Reduced motion support via `prefers-reduced-motion` media query
+- Minimum font sizes (0.75rem) for readability
+- Proper disabled state handling (no `pointer-events: none`)
+
+### Theme Support
+- Light/Dark/System theme modes
+- CSS variables for consistent theming
+- System preference detection and auto-switching
+
 ## Common Mistakes to Avoid
 
 1. **Checking permissions in controllers**: Put RBAC logic in services
 2. **Returning all fields**: Use DTOs to strip sensitive data
 3. **Hardcoding roles**: Use enums from libs/data
 4. **Missing audit logs**: Log all mutations via AuditService
-5. **Client-side only validation**: Always validate server-side
-6. **Exposing stack traces**: Use exception filters
+5. **Client-side only validation**: Always validate server-side with class-validator
+6. **Exposing stack traces**: Use exception filters, sanitize error logging
+7. **Cross-org access**: Always validate organization membership before returning data
+8. **Inaccessible UI**: Include ARIA attributes, focus management, keyboard support
