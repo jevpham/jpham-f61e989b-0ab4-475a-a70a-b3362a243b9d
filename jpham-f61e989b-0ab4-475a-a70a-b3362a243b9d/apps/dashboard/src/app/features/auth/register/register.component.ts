@@ -24,7 +24,7 @@ export class RegisterComponent {
 
   protected registerForm = this.fb.group({
     email: ['', [Validators.required, Validators.email]],
-    password: ['', [Validators.required, Validators.minLength(8), Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/)]],
+    password: ['', [Validators.required, Validators.minLength(8), Validators.pattern(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/)]],
     organizationName: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(100)]],
     organizationSlug: ['', [Validators.required, Validators.minLength(1), Validators.maxLength(50), Validators.pattern(/^[a-z0-9-]+$/)]],
   });
@@ -51,7 +51,7 @@ export class RegisterComponent {
   }
 
   protected get hasSpecialChar(): boolean {
-    return /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(this.passwordValue);
+    return /[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?]/.test(this.passwordValue);
   }
 
   onSubmit() {

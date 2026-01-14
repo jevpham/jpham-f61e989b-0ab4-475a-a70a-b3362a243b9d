@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, DestroyRef, computed, ChangeDetectionStrategy, signal } from '@angular/core';
+import { Component, OnInit, inject, DestroyRef, ChangeDetectionStrategy, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
@@ -278,7 +278,7 @@ import { ThemeService } from '../../core/services/theme.service';
     </div>
 
     @if (showShortcutsDialog()) {
-      <app-keyboard-shortcuts-dialog (close)="showShortcutsDialog.set(false)" />
+      <app-keyboard-shortcuts-dialog (closeDialog)="showShortcutsDialog.set(false)" />
     }
   `,
   styleUrls: ['./dashboard.component.scss'],

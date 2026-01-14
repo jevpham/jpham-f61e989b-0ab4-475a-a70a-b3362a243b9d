@@ -6,28 +6,18 @@ import {
   CreateTaskDto,
   UpdateTaskDto,
   IUser,
-  TaskStatus,
-  TaskCategory,
   AuditAction,
   hasMinimumRole,
+  TaskFilters,
+  PaginatedResponse,
 } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { AuditService } from '../audit/audit.service';
 
-export interface TaskFilters {
-  status?: TaskStatus;
-  category?: TaskCategory;
-  assigneeId?: string;
-  createdById?: string;
-}
+// Re-export for backwards compatibility with existing imports
+export { TaskFilters } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
-export interface PaginatedTasks {
-  data: Task[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+export type PaginatedTasks = PaginatedResponse<Task>;
 
 @Injectable()
 export class TasksService {

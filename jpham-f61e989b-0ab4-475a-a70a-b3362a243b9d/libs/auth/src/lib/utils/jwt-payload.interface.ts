@@ -1,4 +1,4 @@
-import { UserRole } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+import { UserRole, VALID_ROLES } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
 // Minimized JWT payload (no PII)
 export interface JwtPayload {
@@ -20,9 +20,6 @@ export interface LegacyJwtPayload {
   iat?: number;
   exp?: number;
 }
-
-// Valid roles for validation
-const VALID_ROLES: UserRole[] = ['owner', 'admin', 'viewer'];
 
 // Helper to normalize payload (handles both old and new formats)
 // Throws error if required fields are missing to prevent unauthorized access

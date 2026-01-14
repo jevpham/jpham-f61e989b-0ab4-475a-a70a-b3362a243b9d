@@ -1,12 +1,15 @@
 import { IsEmail, IsString, MinLength, MaxLength, IsOptional, Matches, IsIn, IsUUID, IsDateString, Min, Max, IsInt, ValidateIf } from 'class-validator';
 import { Type } from 'class-transformer';
-import { TaskStatus, TaskPriority, TaskCategory, UserRole } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+import { TaskStatus, TaskPriority, TaskCategory, UserRole, VALID_ROLES } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+
+// Password complexity regex - reused across DTOs for consistency
+const PASSWORD_REGEX = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=[\]{};':"\\|,.<>/?])/;
 
 // =============================================================================
 // Auth DTOs
 // =============================================================================
 
-export class LoginDtoValidation {
+export class LoginDto {
   @IsEmail()
   email!: string;
 
@@ -16,17 +19,16 @@ export class LoginDtoValidation {
   password!: string;
 }
 
-export class RegisterDtoValidation {
+export class RegisterDto {
   @IsEmail()
   email!: string;
 
   @IsString()
   @MinLength(8)
   @MaxLength(72)
-  @Matches(
-    /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?])/,
-    { message: 'Password must contain uppercase, lowercase, number, and special character' }
-  )
+  @Matches(PASSWORD_REGEX, {
+    message: 'Password must contain uppercase, lowercase, number, and special character',
+  })
   password!: string;
 
   @IsString()
@@ -50,7 +52,7 @@ export class RegisterDtoValidation {
 // Task DTOs
 // =============================================================================
 
-export class CreateTaskDtoValidation {
+export class CreateTaskDto {
   @IsString()
   @MinLength(1)
   @MaxLength(200)
@@ -78,7 +80,7 @@ export class CreateTaskDtoValidation {
   assigneeId?: string;
 }
 
-export class UpdateTaskDtoValidation {
+export class UpdateTaskDto {
   @IsString()
   @IsOptional()
   @MinLength(1)
@@ -119,7 +121,7 @@ export class UpdateTaskDtoValidation {
   position?: number;
 }
 
-export class ReorderTaskDtoValidation {
+export class ReorderTaskDto {
   @IsInt()
   @Min(0)
   newPosition!: number;
@@ -129,7 +131,7 @@ export class ReorderTaskDtoValidation {
 // Organization DTOs
 // =============================================================================
 
-export class CreateOrganizationDtoValidation {
+export class CreateOrganizationDto {
   @IsString()
   @MinLength(1)
   @MaxLength(100)
@@ -143,7 +145,7 @@ export class CreateOrganizationDtoValidation {
 
   @IsString()
   @IsOptional()
-  @MaxLength(500)
+  @MaxLength(500, { message: 'Description cannot exceed 500 characters' })
   description?: string;
 
   @IsUUID()
@@ -151,19 +153,17 @@ export class CreateOrganizationDtoValidation {
   parentId?: string;
 }
 
-export class AddMemberDtoValidation {
+export class AddMemberDto {
   @IsUUID()
   userId!: string;
 
-  @IsString()
+  @IsIn(VALID_ROLES, { message: `Role must be one of: ${VALID_ROLES.join(', ')}` })
   @IsOptional()
-  @Matches(/^(owner|admin|viewer)$/, { message: 'Role must be owner, admin, or viewer' })
   role?: UserRole;
 }
 
-export class UpdateMemberRoleDtoValidation {
-  @IsString()
-  @Matches(/^(owner|admin|viewer)$/, { message: 'Role must be owner, admin, or viewer' })
+export class UpdateMemberRoleDto {
+  @IsIn(VALID_ROLES, { message: `Role must be one of: ${VALID_ROLES.join(', ')}` })
   role!: UserRole;
 }
 
@@ -171,28 +171,32 @@ export class UpdateMemberRoleDtoValidation {
 // User DTOs
 // =============================================================================
 
-export class CreateUserDtoValidation {
+export class CreateUserDto {
   @IsEmail()
   email!: string;
 
   @IsString()
   @MinLength(8)
+  @MaxLength(72)
+  @Matches(PASSWORD_REGEX, {
+    message: 'Password must contain uppercase, lowercase, number, and special character',
+  })
   password!: string;
 
   @IsUUID()
   organizationId!: string;
 
-  @IsIn(['owner', 'admin', 'viewer'])
+  @IsIn(VALID_ROLES, { message: `Role must be one of: ${VALID_ROLES.join(', ')}` })
   @IsOptional()
   role?: UserRole;
 }
 
-export class UpdateUserDtoValidation {
+export class UpdateUserDto {
   @IsEmail()
   @IsOptional()
   email?: string;
 
-  @IsIn(['owner', 'admin', 'viewer'])
+  @IsIn(VALID_ROLES, { message: `Role must be one of: ${VALID_ROLES.join(', ')}` })
   @IsOptional()
   role?: UserRole;
 }
@@ -201,7 +205,7 @@ export class UpdateUserDtoValidation {
 // Pagination DTOs
 // =============================================================================
 
-export class PaginationDtoValidation {
+export class PaginationDto {
   @IsOptional()
   @Type(() => Number)
   @IsInt()
@@ -220,7 +224,7 @@ export class PaginationDtoValidation {
 // Task Filter DTOs
 // =============================================================================
 
-export class TaskFilterDtoValidation {
+export class TaskFilterDto {
   @IsOptional()
   @IsIn(['todo', 'in_progress', 'review', 'done'])
   status?: TaskStatus;

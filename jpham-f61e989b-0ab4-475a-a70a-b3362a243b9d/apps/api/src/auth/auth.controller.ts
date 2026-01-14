@@ -23,7 +23,7 @@ import { LocalAuthGuard } from './guards/local-auth.guard';
 import { JwtRefreshGuard } from './guards/jwt-refresh.guard';
 import { Public, CurrentUser, JwtPayload } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/auth';
 import { IUser } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
-import { LoginDtoValidation as LoginDto, RegisterDtoValidation as RegisterDto } from '../common/dto/validation.dto';
+import { LoginDto, RegisterDto } from '../common/dto/validation.dto';
 import { UsersService } from '../users/users.service';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { AuditService } from '../audit/audit.service';

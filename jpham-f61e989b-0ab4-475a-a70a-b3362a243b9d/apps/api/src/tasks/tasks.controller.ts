@@ -25,11 +25,11 @@ import { TasksService, TaskFilters } from './tasks.service';
 import { CurrentUser } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/auth';
 import { IUser, ITask } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 import {
-  CreateTaskDtoValidation as CreateTaskDto,
-  UpdateTaskDtoValidation as UpdateTaskDto,
-  ReorderTaskDtoValidation as ReorderTaskDto,
-  PaginationDtoValidation as PaginationDto,
-  TaskFilterDtoValidation as TaskFilterDto,
+  CreateTaskDto,
+  UpdateTaskDto,
+  ReorderTaskDto,
+  PaginationDto,
+  TaskFilterDto,
 } from '../common/dto/validation.dto';
 import { OrganizationsService } from '../organizations/organizations.service';
 import { Task } from './entities/task.entity';

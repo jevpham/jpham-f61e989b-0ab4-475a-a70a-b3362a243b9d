@@ -6,22 +6,12 @@ import {
   ITask,
   CreateTaskDto,
   UpdateTaskDto,
-  TaskStatus,
+  TaskFilters,
+  PaginatedResponse,
 } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
-export interface TaskFilters {
-  status?: TaskStatus;
-  assigneeId?: string;
-  createdById?: string;
-}
-
-export interface PaginatedResponse<T> {
-  data: T[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-}
+// Re-export for backward compatibility with existing imports
+export type { TaskFilters } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
 @Injectable({ providedIn: 'root' })
 export class TasksService {

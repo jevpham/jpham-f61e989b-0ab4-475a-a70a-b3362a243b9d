@@ -9,3 +9,12 @@ export interface PaginationParams {
 export const DEFAULT_PAGE = 1;
 export const DEFAULT_LIMIT = 50;
 export const MAX_LIMIT = 100;
+
+// Generic paginated response type
+export interface PaginatedResponse<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}

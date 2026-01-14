@@ -221,33 +221,7 @@ If you experience conflicts, access the same functionality through the navigatio
 - SQL injection prevention via TypeORM
 - XSS prevention via Angular sanitization
 
-## Architecture Decisions
-
-### Why NX Monorepo?
-
-- **Shared libraries**: The `libs/data` and `libs/auth` packages allow TypeScript interfaces, DTOs, and auth utilities to be shared between frontend and backend, ensuring type safety across the stack
-- **Consistent tooling**: Single configuration for linting, testing, and building across all projects
-- **Scalable structure**: Easy to add new apps (e.g., mobile client, admin portal) that reuse existing libraries
-
-### Why NgRx Signals over Classic NgRx?
-
-- **Simpler API**: Signal-based stores require less boilerplate than traditional actions/reducers/effects pattern
-- **Fine-grained reactivity**: Signals provide more granular change detection than RxJS Observables
-- **Angular's direction**: Signals are Angular's modern approach to reactivity (introduced in Angular 16+)
-
-### Why CASL for Permissions?
-
-- **Declarative rules**: Permissions defined as readable ability rules (`can('update', 'Task')`)
-- **Framework-agnostic**: Same permission logic works on both frontend (UI visibility) and backend (guards)
-- **Composable**: Easy to extend with organization-based scoping and role inheritance
-
-### Why SQLite for Development?
-
-- **Zero setup**: No database server required, simplifies local development and demo
-- **TypeORM compatibility**: Same entity definitions work with PostgreSQL in production
-- **Instructions allow either**: The challenge permits SQLite or PostgreSQL
-
-### Trade-offs & Future Improvements
+## Trade-offs & Future Improvements
 
 | Current Implementation                 | Production Enhancement                          |
 |----------------------------------------|-------------------------------------------------|
