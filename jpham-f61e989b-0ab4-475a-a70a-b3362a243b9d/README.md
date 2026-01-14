@@ -132,6 +132,19 @@ Three-tier role hierarchy: **Owner > Admin > Viewer**
    npx nx run api:migration:run
    ```
 
+6. Seed demo data (optional):
+
+   ```bash
+   node scripts/seed.js
+   ```
+
+   This creates a demo organization with three users:
+   - `owner@demo.com` / `Demo@123` (Owner role)
+   - `admin@demo.com` / `Demo@123` (Admin role)
+   - `viewer@demo.com` / `Demo@123` (Viewer role)
+
+   > **Note:** The SQLite database is pre-seeded, so this step is only needed if you want to reset or customize the demo data.
+
 ### Development
 
 Start both backend and frontend:
