@@ -10,7 +10,7 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
   template: `
     <div
       class="shortcuts-overlay"
-      (click)="close.emit()"
+      (click)="closeDialog.emit()"
       role="presentation"
     >
       <div
@@ -20,7 +20,7 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
         aria-labelledby="shortcuts-title"
         aria-describedby="shortcuts-description"
         (click)="$event.stopPropagation()"
-        (keydown.escape)="close.emit()"
+        (keydown.escape)="closeDialog.emit()"
         cdkTrapFocus
         cdkTrapFocusAutoCapture
       >
@@ -36,7 +36,7 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
             <p class="header-subtitle">Move faster around your workspace</p>
           </div>
           <button
-            (click)="close.emit()"
+            (click)="closeDialog.emit()"
             class="close-btn"
             type="button"
             aria-label="Close keyboard shortcuts dialog"
@@ -308,7 +308,7 @@ import { KeyboardShortcutsService } from '../../../core/services/keyboard-shortc
   `],
 })
 export class KeyboardShortcutsDialogComponent {
-  @Output() close = new EventEmitter<void>();
+  @Output() closeDialog = new EventEmitter<void>();
 
   protected readonly keyboardService = inject(KeyboardShortcutsService);
   protected readonly shortcuts = this.keyboardService.getShortcuts();

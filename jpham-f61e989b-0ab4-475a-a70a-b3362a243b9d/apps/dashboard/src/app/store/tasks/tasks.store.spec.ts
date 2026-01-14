@@ -407,8 +407,11 @@ describe('TasksStore', () => {
       );
     });
 
-    it('should move task without explicit position', async () => {
-      const updatedTask = { ...mockTasks[0], status: 'done' as TaskStatus };
+    it('should move task without explicit position (auto-calculates end position)', async () => {
+      // When no position is provided, moveTask places the task at the end of the
+      // target column by computing max(existingPositions) + 1
+      // The 'done' column has tasks at positions 0 and 1, so effectivePosition = 2
+      const updatedTask = { ...mockTasks[0], status: 'done' as TaskStatus, position: 2 };
       tasksServiceMock.updateTask.mockReturnValue(of(updatedTask));
 
       store.moveTask({
@@ -421,7 +424,7 @@ describe('TasksStore', () => {
       expect(tasksServiceMock.updateTask).toHaveBeenCalledWith(
         organizationId,
         'task-1',
-        { status: 'done' },
+        { status: 'done', position: 2 },
       );
     });
 

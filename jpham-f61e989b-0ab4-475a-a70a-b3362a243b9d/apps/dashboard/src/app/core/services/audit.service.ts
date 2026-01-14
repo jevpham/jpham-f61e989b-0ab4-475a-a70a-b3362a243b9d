@@ -2,23 +2,16 @@ import { Injectable, inject } from '@angular/core';
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Observable } from 'rxjs';
 import { environment } from '../../../environments/environment';
-import { IAuditLog } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
+import {
+  IAuditLog,
+  AuditLogFilters,
+  PaginatedResponse,
+} from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
-export interface AuditLogFilters {
-  action?: string;
-  resource?: string;
-  userId?: string;
-  organizationId?: string;
-  startDate?: string;
-  endDate?: string;
-}
+// Re-export for backward compatibility with existing imports
+export type { AuditLogFilters } from '@jpham-f61e989b-0ab4-475a-a70a-b3362a243b9d/data';
 
-export interface PaginatedAuditLogs {
-  data: IAuditLog[];
-  total: number;
-  page: number;
-  limit: number;
-}
+export type PaginatedAuditLogs = PaginatedResponse<IAuditLog>;
 
 @Injectable({ providedIn: 'root' })
 export class AuditService {

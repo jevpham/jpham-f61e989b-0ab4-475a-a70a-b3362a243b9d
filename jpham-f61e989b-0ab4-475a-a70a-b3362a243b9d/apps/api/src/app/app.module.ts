@@ -3,8 +3,6 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { AuthModule } from '../auth/auth.module';
 import { UsersModule } from '../users/users.module';
 import { OrganizationsModule } from '../organizations/organizations.module';
@@ -119,9 +117,8 @@ const jwtSecretWithEntropy = Joi.string()
     TasksModule,
     AuditModule,
   ],
-  controllers: [AppController],
+  controllers: [],
   providers: [
-    AppService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard },
     { provide: APP_GUARD, useClass: CsrfGuard },

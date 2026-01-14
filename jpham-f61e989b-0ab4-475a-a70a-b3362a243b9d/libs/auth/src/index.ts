@@ -6,8 +6,5 @@ export * from './lib/decorators/public.decorator';
 // Guards
 export * from './lib/guards/roles.guard';
 
-// Abilities
-export * from './lib/abilities/ability.factory';
-
 // Utils
 export * from './lib/utils/jwt-payload.interface';

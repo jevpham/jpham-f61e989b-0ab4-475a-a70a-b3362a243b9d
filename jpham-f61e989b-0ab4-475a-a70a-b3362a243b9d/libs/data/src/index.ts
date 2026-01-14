@@ -1,7 +1,6 @@
 // Enums
 export * from './lib/enums/role.enum';
 export * from './lib/enums/task-status.enum';
-export * from './lib/enums/permission.enum';
 export * from './lib/enums/audit-action.enum';
 
 // Interfaces
@@ -17,3 +16,7 @@ export * from './lib/dto/user.dto';
 export * from './lib/dto/organization.dto';
 export * from './lib/dto/pagination.dto';
 export * from './lib/dto/task-filter.dto';
+export * from './lib/dto/audit-filter.dto';
+
+// Testing utilities
+export * from './lib/testing/fixtures';

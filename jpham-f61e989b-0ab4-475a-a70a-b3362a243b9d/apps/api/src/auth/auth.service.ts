@@ -13,7 +13,7 @@ const LOCKOUT_DURATION_MINUTES = 15;
 @Injectable()
 export class AuthService implements OnModuleInit {
   private readonly logger = new Logger(AuthService.name);
-  private dummyHash: string = '';
+  private dummyHash = '';
   private readonly jwtAccessSecret: string;
   private readonly jwtRefreshSecret: string;
 

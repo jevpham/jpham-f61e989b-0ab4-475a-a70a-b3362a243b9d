@@ -20,6 +20,7 @@ import {
     <div
       class="task-form-overlay"
       (click)="onCancel()"
+      (keydown.escape)="onCancel()"
       role="presentation"
     >
       <div
@@ -29,6 +30,7 @@ import {
         aria-labelledby="task-form-title"
         aria-describedby="task-form-subtitle"
         (click)="$event.stopPropagation()"
+        (keydown)="$event.stopPropagation()"
         #modalElement
       >
         <!-- Header -->
@@ -226,8 +228,8 @@ export class TaskFormComponent implements OnInit, AfterViewInit {
   @Input() task: ITask | null = null;
   @Input() canDelete = true; // RBAC: Controls delete button visibility
   @Output() save = new EventEmitter<CreateTaskDto | UpdateTaskDto>();
-  @Output() delete = new EventEmitter<void>();
-  @Output() cancel = new EventEmitter<void>();
+  @Output() deleteTask = new EventEmitter<void>();
+  @Output() cancelForm = new EventEmitter<void>();
 
   @ViewChild('titleInput') titleInput!: ElementRef<HTMLInputElement>;
   @ViewChild('modalElement') modalElement!: ElementRef<HTMLDivElement>;
@@ -342,11 +344,11 @@ export class TaskFormComponent implements OnInit, AfterViewInit {
     }
 
     if (confirm('Are you sure you want to delete this task? This action cannot be undone.')) {
-      this.delete.emit();
+      this.deleteTask.emit();
     }
   }
 
   onCancel() {
-    this.cancel.emit();
+    this.cancelForm.emit();
   }
 }

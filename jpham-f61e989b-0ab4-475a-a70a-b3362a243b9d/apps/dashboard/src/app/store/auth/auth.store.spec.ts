@@ -27,7 +27,7 @@ describe('AuthStore', () => {
   };
 
   // Create a valid JWT token for testing (expires in 1 hour)
-  const createMockToken = (expiresInSeconds: number = 3600): string => {
+  const createMockToken = (expiresInSeconds = 3600): string => {
     const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }));
     const payload = btoa(JSON.stringify({
       sub: mockUser.id,

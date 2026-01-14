@@ -185,8 +185,8 @@ interface Column {
         [task]="selectedTask()"
         [canDelete]="canDeleteTask()"
         (save)="onSave($event)"
-        (delete)="onDelete()"
-        (cancel)="closeForm()"
+        (deleteTask)="onDelete()"
+        (cancelForm)="closeForm()"
       />
     }
   `,

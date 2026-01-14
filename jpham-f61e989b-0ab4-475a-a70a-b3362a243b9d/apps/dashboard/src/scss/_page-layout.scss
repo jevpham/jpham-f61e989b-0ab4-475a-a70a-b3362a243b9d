@@ -1,0 +1,104 @@
+/* ===========================================
+   SHARED PAGE LAYOUT STYLES
+   Common patterns for page containers, decorative
+   elements, and sticky headers
+   =========================================== */
+
+/* Base page container - full-height with background */
+@mixin page-container {
+  min-height: 100vh;
+  background: var(--color-primary-50, #fafaf9);
+  position: relative;
+  overflow-x: hidden;
+
+  :host-context(.dark) & {
+    background: #0c0c0c;
+  }
+}
+
+/* Decorative grid background pattern */
+@mixin decorative-grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(0,0,0,0.02) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,0,0,0.02) 1px, transparent 1px);
+  background-size: 60px 60px;
+  pointer-events: none;
+  z-index: var(--z-base, 0);
+
+  :host-context(.dark) & {
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+  }
+}
+
+/* Decorative accent gradient */
+@mixin decorative-accent($color: rgba(13, 148, 136, 0.08), $dark-color: rgba(13, 148, 136, 0.12)) {
+  position: fixed;
+  top: -200px;
+  right: -200px;
+  width: 600px;
+  height: 600px;
+  background: radial-gradient(circle, $color 0%, transparent 70%);
+  pointer-events: none;
+  z-index: var(--z-base, 0);
+
+  :host-context(.dark) & {
+    background: radial-gradient(circle, $dark-color 0%, transparent 70%);
+  }
+}
+
+/* Sticky header with blur backdrop */
+@mixin sticky-header {
+  position: sticky;
+  top: 0;
+  z-index: var(--z-header, 100);
+  background: rgba(250, 250, 249, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-bottom: 1px solid rgba(0, 0, 0, 0.06);
+
+  :host-context(.dark) & {
+    background: rgba(12, 12, 12, 0.85);
+    border-bottom-color: rgba(255, 255, 255, 0.06);
+  }
+}
+
+/* Standard header content container */
+@mixin header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: var(--space-lg, 1rem) var(--space-2xl, 2rem);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2xl, 2rem);
+}
+
+/* Empty state styling */
+@mixin empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: var(--space-3xl, 3rem) var(--space-xl, 1.5rem);
+}
+
+/* Fade in animation */
+@mixin fade-in-animation($duration: 0.3s, $delay: 0s) {
+  animation: fadeIn $duration ease-out $delay both;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -1,10 +1,12 @@
 import { TaskStatus, TaskCategory } from '../enums/task-status.enum';
 
-// Plain interface for frontend compatibility
-// Backend validates these params directly in the controller/service
-export interface TaskFilterParams {
+// Unified task filter interface for both frontend and backend
+export interface TaskFilters {
   status?: TaskStatus;
   category?: TaskCategory;
   assigneeId?: string;
   createdById?: string;
 }
+
+// Alias for backwards compatibility
+export type TaskFilterParams = TaskFilters;

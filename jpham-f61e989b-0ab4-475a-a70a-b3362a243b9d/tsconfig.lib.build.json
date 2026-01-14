@@ -1,0 +1,21 @@
+{
+  "compilerOptions": {
+    "outDir": "../../dist/out-tsc",
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+    "types": ["node"],
+    "module": "esnext",
+    "target": "es2020",
+    "moduleResolution": "node",
+    "strict": true,
+    "rootDir": "./src"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": [
+    "jest.config.ts",
+    "jest.config.cts",
+    "src/**/*.spec.ts",
+    "src/**/*.test.ts"
+  ]
+}

@@ -90,7 +90,7 @@ describe('TasksService', () => {
   };
 
   // Helper to create a mock transaction manager
-  const createMockManager = (maxPosition: number = 5) => {
+  const createMockManager = (maxPosition = 5) => {
     const mockQb = createMockQueryBuilder(null);
     mockQb.getRawOne.mockResolvedValue({ max: maxPosition });
 
